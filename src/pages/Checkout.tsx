@@ -7,11 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle } from 'lucide-react';
+import { Loader2, CheckCircle, CreditCard, Banknote } from 'lucide-react';
+import UPIPayment from '@/components/checkout/UPIPayment';
+
+// Replace this with your actual Paytm Business QR code URL
+const PAYTM_QR_CODE_URL = 'https://via.placeholder.com/300x300?text=Your+Paytm+QR';
 
 const Checkout = () => {
   const { items, totalAmount, clearCart } = useCart();
@@ -21,6 +26,7 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'cod'>('upi');
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -44,16 +50,19 @@ const Checkout = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handlePlaceOrder = async () => {
+  const validateForm = () => {
     if (!formData.fullName || !formData.phone || !formData.address || !formData.city || !formData.pincode) {
       toast({
         title: 'Error',
         description: 'Please fill all required fields',
         variant: 'destructive',
       });
-      return;
+      return false;
     }
+    return true;
+  };
 
+  const placeOrder = async (paymentId: string, paymentStatus: string) => {
     setLoading(true);
 
     try {
@@ -67,7 +76,8 @@ const Checkout = () => {
           total_amount: totalAmount,
           shipping_address: shippingAddress,
           status: 'confirmed',
-          payment_status: 'paid', // COD or simulated payment
+          payment_status: paymentStatus,
+          payment_id: paymentId,
         })
         .select()
         .single();
@@ -110,6 +120,16 @@ const Checkout = () => {
     }
   };
 
+  const handleUPIPayment = (utrNumber: string, method: string) => {
+    if (!validateForm()) return;
+    placeOrder(`UPI:${method.toUpperCase()}:${utrNumber}`, 'paid');
+  };
+
+  const handleCODOrder = () => {
+    if (!validateForm()) return;
+    placeOrder('COD', 'pending');
+  };
+
   if (orderPlaced) {
     return (
       <div className="min-h-screen flex flex-col bg-muted">
@@ -138,7 +158,7 @@ const Checkout = () => {
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Shipping Form */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Shipping Address</CardTitle>
@@ -206,6 +226,50 @@ const Checkout = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Payment Method Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Payment Method</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup 
+                  value={paymentMethod} 
+                  onValueChange={(value) => setPaymentMethod(value as 'upi' | 'cod')}
+                  className="space-y-3"
+                >
+                  <div className="flex items-center space-x-3 p-4 rounded-lg border-2 border-primary bg-primary/5">
+                    <RadioGroupItem value="upi" id="upi" />
+                    <Label htmlFor="upi" className="flex items-center gap-2 cursor-pointer flex-1">
+                      <CreditCard className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">UPI Payment</p>
+                        <p className="text-sm text-muted-foreground">GPay, PhonePe, Paytm, Other UPI</p>
+                      </div>
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-4 rounded-lg border-2 hover:border-primary/50 transition-colors">
+                    <RadioGroupItem value="cod" id="cod" />
+                    <Label htmlFor="cod" className="flex items-center gap-2 cursor-pointer flex-1">
+                      <Banknote className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="font-medium">Cash on Delivery</p>
+                        <p className="text-sm text-muted-foreground">Pay when you receive your order</p>
+                      </div>
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                {paymentMethod === 'upi' && (
+                  <UPIPayment
+                    amount={totalAmount}
+                    qrCodeUrl={PAYTM_QR_CODE_URL}
+                    onPaymentConfirm={handleUPIPayment}
+                    disabled={loading}
+                  />
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Order Summary */}
@@ -216,13 +280,23 @@ const Checkout = () => {
                   Order Summary
                 </h2>
                 <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span>Items ({items.length})</span>
-                    <span>₹{totalAmount.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Delivery</span>
-                    <span className="text-green-600">FREE</span>
+                  {items.map((item) => (
+                    <div key={item.id} className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {item.product?.name} × {item.quantity}
+                      </span>
+                      <span>₹{((item.product?.selling_price || 0) * item.quantity).toLocaleString('en-IN')}</span>
+                    </div>
+                  ))}
+                  <div className="border-t pt-3 mt-3">
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span>₹{totalAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-green-600">
+                      <span>Delivery</span>
+                      <span>FREE</span>
+                    </div>
                   </div>
                   <div className="border-t pt-3 mt-3">
                     <div className="flex justify-between font-bold text-lg">
@@ -231,21 +305,25 @@ const Checkout = () => {
                     </div>
                   </div>
                 </div>
-                <Button
-                  className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white"
-                  size="lg"
-                  onClick={handlePlaceOrder}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Place Order (Cash on Delivery)'
-                  )}
-                </Button>
+
+                {paymentMethod === 'cod' && (
+                  <Button
+                    className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white"
+                    size="lg"
+                    onClick={handleCODOrder}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Place Order (Cash on Delivery)'
+                    )}
+                  </Button>
+                )}
+
                 <p className="text-xs text-muted-foreground text-center mt-4">
                   By placing this order, you agree to our terms and conditions.
                 </p>
