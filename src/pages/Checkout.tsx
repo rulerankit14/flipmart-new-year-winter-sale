@@ -14,9 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, CheckCircle, CreditCard, Banknote } from 'lucide-react';
 import UPIPayment from '@/components/checkout/UPIPayment';
-
-// Replace this with your actual Paytm Business QR code URL
-const PAYTM_QR_CODE_URL = 'https://via.placeholder.com/300x300?text=Your+Paytm+QR';
+import paytmQrCode from '@/assets/paytm-qr.png';
 
 const Checkout = () => {
   const { items, totalAmount, clearCart } = useCart();
@@ -263,7 +261,7 @@ const Checkout = () => {
                 {paymentMethod === 'upi' && (
                   <UPIPayment
                     amount={totalAmount}
-                    qrCodeUrl={PAYTM_QR_CODE_URL}
+                    qrCodeUrl={paytmQrCode}
                     onPaymentConfirm={handleUPIPayment}
                     disabled={loading}
                   />
