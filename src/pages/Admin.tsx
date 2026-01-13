@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, Edit, Package, ShoppingCart, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const Admin = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -67,7 +68,12 @@ const Admin = () => {
 
   const handleDeleteProduct = async (id: string) => {
     const { error } = await supabase.from('products').delete().eq('id', id);
-    if (!error) fetchData();
+    if (error) {
+      toast({ title: 'Error deleting product', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Product deleted successfully!' });
+      fetchData();
+    }
   };
 
   if (authLoading || loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -111,7 +117,35 @@ const Admin = () => {
               </CardHeader>
               <CardContent>
                 <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Original</TableHead><TableHead>Selling</TableHead><TableHead>Stock</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                  <TableBody>{products.map(p => (<TableRow key={p.id}><TableCell>{p.name}</TableCell><TableCell>₹{p.original_price}</TableCell><TableCell>₹{p.selling_price}</TableCell><TableCell>{p.stock}</TableCell><TableCell><Button variant="destructive" size="sm" onClick={() => handleDeleteProduct(p.id)}><Trash2 className="h-4 w-4" /></Button></TableCell></TableRow>))}</TableBody>
+                  <TableBody>{products.map(p => (
+                    <TableRow key={p.id}>
+                      <TableCell>{p.name}</TableCell>
+                      <TableCell>₹{p.original_price}</TableCell>
+                      <TableCell>₹{p.selling_price}</TableCell>
+                      <TableCell>{p.stock}</TableCell>
+                      <TableCell>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /></Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{p.name}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteProduct(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}</TableBody>
                 </Table>
               </CardContent>
             </Card>
