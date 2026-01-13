@@ -44,7 +44,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="border-t border-gray-600 mt-8 pt-8 text-center text-xs">
-          <p>© 2024 Flipkart Clone. All rights reserved.</p>
+          <p>© Flipkart 2025. All rights reserved.</p>
         </div>
       </div>
     </footer>
