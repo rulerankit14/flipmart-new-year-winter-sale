@@ -8,13 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, CreditCard, Banknote } from 'lucide-react';
+import { Loader2, CheckCircle, CreditCard, Banknote, Truck } from 'lucide-react';
 import UPIPayment from '@/components/checkout/UPIPayment';
 import paytmQrCode from '@/assets/paytm-qr.png';
+
+const COD_CHARGE = 59;
 
 const Checkout = () => {
   const { items, totalAmount, clearCart } = useCart();
@@ -25,6 +28,7 @@ const Checkout = () => {
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'cod'>('upi');
+  const [showCodModal, setShowCodModal] = useState(false);
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -123,9 +127,14 @@ const Checkout = () => {
     placeOrder(`UPI:${method.toUpperCase()}:${utrNumber}`, 'paid');
   };
 
-  const handleCODOrder = () => {
+  const handleCODClick = () => {
     if (!validateForm()) return;
-    placeOrder('COD', 'pending');
+    setShowCodModal(true);
+  };
+
+  const handleCODConfirmPayment = (utrNumber: string, method: string) => {
+    setShowCodModal(false);
+    placeOrder(`COD:FEE_PAID:${method.toUpperCase()}:${utrNumber}`, 'cod_fee_paid');
   };
 
   if (orderPlaced) {
@@ -250,9 +259,12 @@ const Checkout = () => {
                     <RadioGroupItem value="cod" id="cod" />
                     <Label htmlFor="cod" className="flex items-center gap-2 cursor-pointer flex-1">
                       <Banknote className="h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="font-medium">Cash on Delivery</p>
-                        <p className="text-sm text-muted-foreground">Pay when you receive your order</p>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium">Cash on Delivery</p>
+                          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium">+₹{COD_CHARGE} fee</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">Pay ₹{COD_CHARGE} online to confirm COD order</p>
                       </div>
                     </Label>
                   </div>
@@ -308,7 +320,7 @@ const Checkout = () => {
                   <Button
                     className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white"
                     size="lg"
-                    onClick={handleCODOrder}
+                    onClick={handleCODClick}
                     disabled={loading}
                   >
                     {loading ? (
@@ -317,7 +329,7 @@ const Checkout = () => {
                         Processing...
                       </>
                     ) : (
-                      'Place Order (Cash on Delivery)'
+                      `Pay ₹${COD_CHARGE} to Confirm COD Order`
                     )}
                   </Button>
                 )}
@@ -332,6 +344,39 @@ const Checkout = () => {
       </main>
       
       <Footer />
+
+      {/* COD Confirmation Modal */}
+      <Dialog open={showCodModal} onOpenChange={setShowCodModal}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+          <div className="bg-gradient-to-br from-green-500 to-green-600 p-8 text-white text-center">
+            <div className="bg-white/20 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <Truck className="h-8 w-8" />
+            </div>
+            <h2 className="text-2xl font-bold">Cash On Delivery</h2>
+          </div>
+          <div className="p-6">
+            <p className="text-center mb-6">
+              <span className="font-semibold">Cash On Delivery</span> is available with a{' '}
+              <span className="font-bold text-orange-600">₹{COD_CHARGE} confirmation charge</span>. 
+              You must pay this small fee online to confirm your COD order.
+            </p>
+            <UPIPayment
+              amount={COD_CHARGE}
+              qrCodeUrl={paytmQrCode}
+              onPaymentConfirm={handleCODConfirmPayment}
+              disabled={loading}
+              buttonText={`Pay ₹${COD_CHARGE} to Confirm Order`}
+            />
+            <Button
+              variant="outline"
+              className="w-full mt-3"
+              onClick={() => setShowCodModal(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
