@@ -4,6 +4,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { QrCode, Check } from 'lucide-react';
+import phonePeLogo from '@/assets/phonepe-logo.png';
+import gpayLogo from '@/assets/gpay-logo.png';
+import paytmLogo from '@/assets/paytm-logo.png';
 
 interface UPIPaymentProps {
   amount: number;
@@ -128,11 +131,8 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
         <div className="bg-gradient-to-r from-[#5f259f] to-[#6739b7] p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* PhonePe Logo */}
-            <div className="bg-white rounded-lg p-2">
-              <svg viewBox="0 0 24 24" className="w-8 h-8">
-                <circle cx="12" cy="12" r="12" fill="#5f259f"/>
-                <path d="M12 4c-1.1 0-2 .9-2 2v4H8c-.55 0-1 .45-1 1s.45 1 1 1h2v6c0 1.1.9 2 2 2s2-.9 2-2v-6h2c.55 0 1-.45 1-1s-.45-1-1-1h-2V6c0-1.1-.9-2-2-2z" fill="white"/>
-              </svg>
+            <div className="bg-white rounded-lg p-1 overflow-hidden">
+              <img src={phonePeLogo} alt="PhonePe" className="w-10 h-10 object-contain" />
             </div>
             <span className="text-white text-lg font-semibold">PhonePe</span>
           </div>
@@ -166,10 +166,8 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
             className="w-full flex items-center gap-4 p-4 border-b hover:bg-gray-50 transition-colors"
             disabled={disabled}
           >
-            <div className="w-12 h-12 rounded-full bg-[#5f259f] flex items-center justify-center">
-              <svg viewBox="0 0 24 24" className="w-6 h-6">
-                <path d="M12 2c-1.1 0-2 .9-2 2v4H8c-.55 0-1 .45-1 1s.45 1 1 1h2v6c0 1.1.9 2 2 2s2-.9 2-2v-6h2c.55 0 1-.45 1-1s-.45-1-1-1h-2V4c0-1.1-.9-2-2-2z" fill="white"/>
-              </svg>
+            <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center">
+              <img src={phonePeLogo} alt="PhonePe" className="w-12 h-12 object-cover" />
             </div>
             <span className="text-lg font-medium text-gray-800">PhonePe</span>
           </button>
@@ -180,13 +178,8 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
             className="w-full flex items-center gap-4 p-4 border-b hover:bg-gray-50 transition-colors"
             disabled={disabled}
           >
-            <div className="w-12 h-12 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center overflow-hidden">
-              <svg viewBox="0 0 48 48" className="w-8 h-8">
-                <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
-                <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
-                <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z"/>
-                <path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
-              </svg>
+            <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-white">
+              <img src={gpayLogo} alt="Google Pay" className="w-10 h-10 object-contain" />
             </div>
             <span className="text-lg font-medium text-gray-800">Google Pay</span>
           </button>
@@ -197,8 +190,8 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
             className="w-full flex items-center gap-4 p-4 border-b hover:bg-gray-50 transition-colors"
             disabled={disabled}
           >
-            <div className="w-12 h-12 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center">
-              <span className="text-[#00BAF2] font-bold text-sm">paytm</span>
+            <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center bg-white border border-gray-200">
+              <img src={paytmLogo} alt="Paytm" className="w-10 h-6 object-contain" />
             </div>
             <span className="text-lg font-medium text-gray-800">Paytm</span>
           </button>
