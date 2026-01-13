@@ -11,6 +11,7 @@ interface UPIPaymentProps {
   qrCodeUrl: string;
   onPaymentConfirm: (utrNumber: string, paymentMethod: string) => void;
   disabled?: boolean;
+  buttonText?: string;
 }
 
 const paymentMethods = [
@@ -24,7 +25,8 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
   amount, 
   qrCodeUrl, 
   onPaymentConfirm,
-  disabled = false 
+  disabled = false,
+  buttonText
 }) => {
   const [selectedMethod, setSelectedMethod] = useState('gpay');
   const [utrNumber, setUtrNumber] = useState('');
@@ -80,7 +82,7 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
             className="w-full bg-primary hover:bg-primary/90"
             disabled={disabled}
           >
-            Proceed to Pay ₹{amount.toLocaleString('en-IN')}
+            {buttonText || `Proceed to Pay ₹${amount.toLocaleString('en-IN')}`}
           </Button>
         ) : (
           <div className="space-y-4">
