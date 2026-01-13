@@ -5,6 +5,7 @@ import Footer from '@/components/layout/Footer';
 import HeroBanner from '@/components/home/HeroBanner';
 import CategoryBanner from '@/components/home/CategoryBanner';
 import ProductSection from '@/components/home/ProductSection';
+import LiveSaleTimer from '@/components/home/LiveSaleTimer';
 
 interface Category {
   id: string;
@@ -35,10 +36,7 @@ const Index = () => {
       ]);
 
       if (categoriesRes.data) {
-        setCategories(categoriesRes.data.map(c => ({
-          ...c,
-          imageUrl: c.image_url
-        })));
+        setCategories(categoriesRes.data);
       }
       if (productsRes.data) {
         setProducts(productsRes.data);
@@ -50,7 +48,7 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted">
+    <div className="min-h-screen flex flex-col bg-gray-100">
       <Header />
       
       <main className="flex-1">
@@ -63,32 +61,29 @@ const Index = () => {
         
         <HeroBanner />
         
-        <div className="space-y-4 py-4">
+        <LiveSaleTimer />
+        
+        <div>
           {loading ? (
-            <div className="container mx-auto px-4">
+            <div className="p-4">
               <div className="animate-pulse">
-                <div className="h-8 w-48 bg-muted-foreground/20 rounded mb-4"></div>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {[...Array(10)].map((_, i) => (
-                    <div key={i} className="bg-card rounded-lg p-4">
-                      <div className="aspect-square bg-muted-foreground/20 rounded mb-4"></div>
-                      <div className="h-4 bg-muted-foreground/20 rounded mb-2"></div>
-                      <div className="h-4 w-2/3 bg-muted-foreground/20 rounded"></div>
+                <div className="grid grid-cols-2 gap-[1px] bg-gray-200">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="bg-white p-4">
+                      <div className="aspect-square bg-gray-200 rounded mb-3"></div>
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-4 w-2/3 bg-gray-200 rounded"></div>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
           ) : products.length > 0 ? (
-            <ProductSection
-              title="Best Deals"
-              products={products}
-              viewAllLink="/products"
-            />
+            <ProductSection products={products} />
           ) : (
-            <div className="container mx-auto px-4 py-16 text-center">
-              <h2 className="text-2xl font-bold text-foreground mb-4">No Products Yet</h2>
-              <p className="text-muted-foreground">
+            <div className="bg-white py-16 text-center">
+              <h2 className="text-xl font-bold text-gray-800 mb-2">No Products Yet</h2>
+              <p className="text-gray-500 text-sm">
                 Products will appear here once added by admin.
               </p>
             </div>
