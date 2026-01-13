@@ -15,19 +15,40 @@ interface UPIPaymentProps {
   onPaymentConfirm: (utrNumber: string, paymentMethod: string) => void;
   disabled?: boolean;
   buttonText?: string;
+  upiId?: string;
+  merchantName?: string;
 }
+
+// UPI deep link configurations
+const UPI_APPS = {
+  PhonePe: {
+    scheme: 'phonepe://pay',
+    fallback: 'https://phon.pe/ru_all',
+  },
+  GPay: {
+    scheme: 'tez://upi/pay',
+    fallback: 'https://pay.google.com',
+  },
+  Paytm: {
+    scheme: 'paytmmp://pay',
+    fallback: 'https://paytm.com',
+  },
+};
 
 const UPIPayment: React.FC<UPIPaymentProps> = ({ 
   amount, 
   qrCodeUrl, 
   onPaymentConfirm,
   disabled = false,
-  buttonText
+  buttonText,
+  upiId = 'merchant@paytm',
+  merchantName = 'Flipkart'
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [utrNumber, setUtrNumber] = useState('');
   const [showQR, setShowQR] = useState(false);
   const [timeLeft, setTimeLeft] = useState({ minutes: 6, seconds: 12 });
+  const [appOpened, setAppOpened] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -44,9 +65,50 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
     return () => clearInterval(timer);
   }, []);
 
+  const generateUPILink = (appKey: keyof typeof UPI_APPS) => {
+    const app = UPI_APPS[appKey];
+    const params = new URLSearchParams({
+      pa: upiId,
+      pn: merchantName,
+      am: amount.toString(),
+      cu: 'INR',
+      tn: `Payment for order`,
+    });
+    return `${app.scheme}?${params.toString()}`;
+  };
+
+  const generateGenericUPILink = () => {
+    const params = new URLSearchParams({
+      pa: upiId,
+      pn: merchantName,
+      am: amount.toString(),
+      cu: 'INR',
+      tn: `Payment for order`,
+    });
+    return `upi://pay?${params.toString()}`;
+  };
+
   const handleMethodSelect = (method: string) => {
     setSelectedMethod(method);
-    setShowQR(true);
+    
+    if (method === 'Scan To Pay') {
+      setShowQR(true);
+      return;
+    }
+
+    // Try to open the app
+    const appKey = method as keyof typeof UPI_APPS;
+    if (UPI_APPS[appKey]) {
+      const upiLink = generateUPILink(appKey);
+      
+      // Create a hidden link and click it to open the app
+      const link = document.createElement('a');
+      link.href = upiLink;
+      link.click();
+      
+      setAppOpened(true);
+      setShowQR(true);
+    }
   };
 
   const handleConfirmPayment = () => {
@@ -60,10 +122,25 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
     return (
       <Card className="mt-4">
         <CardContent className="p-4 space-y-4">
+          {appOpened && selectedMethod !== 'Scan To Pay' && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+              <p className="text-green-700 font-medium">
+                ✓ {selectedMethod} app opened
+              </p>
+              <p className="text-sm text-green-600 mt-1">
+                Complete the payment in the app, then enter UTR below
+              </p>
+            </div>
+          )}
+          
           <div className="bg-muted/50 rounded-lg p-4 text-center">
             <div className="flex items-center justify-center gap-2 mb-3">
               <QrCode className="h-5 w-5 text-primary" />
-              <span className="font-medium">Scan QR Code to Pay</span>
+              <span className="font-medium">
+                {appOpened && selectedMethod !== 'Scan To Pay' 
+                  ? 'Or scan QR Code to Pay' 
+                  : 'Scan QR Code to Pay'}
+              </span>
             </div>
             
             <div className="bg-white p-4 rounded-lg inline-block mx-auto shadow-sm">
@@ -78,11 +155,25 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
             </div>
             
             <p className="text-sm text-muted-foreground mt-3">
-              Open <strong>{selectedMethod}</strong> and scan this QR code
+              {appOpened && selectedMethod !== 'Scan To Pay'
+                ? `Didn't open? Scan this QR code with ${selectedMethod}`
+                : `Open ${selectedMethod} and scan this QR code`}
             </p>
             <p className="text-lg font-bold text-primary mt-2">
               Amount: ₹{amount.toLocaleString('en-IN')}
             </p>
+            
+            {/* Retry open app button */}
+            {selectedMethod !== 'Scan To Pay' && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => handleMethodSelect(selectedMethod)}
+              >
+                Open {selectedMethod} again
+              </Button>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -116,6 +207,7 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
             onClick={() => {
               setShowQR(false);
               setSelectedMethod(null);
+              setAppOpened(false);
             }}
           >
             Choose different payment method
