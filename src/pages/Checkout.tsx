@@ -13,12 +13,14 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, CreditCard, Banknote, Truck, ArrowLeft, Check } from 'lucide-react';
+import { Loader2, CheckCircle, Truck, ArrowLeft, Check } from 'lucide-react';
 import UPIPayment from '@/components/checkout/UPIPayment';
 import paytmQrCode from '@/assets/paytm-qr.png';
 import phonePeLogo from '@/assets/phonepe-logo.png';
 import gpayLogo from '@/assets/gpay-logo.png';
 import paytmLogo from '@/assets/paytm-logo.png';
+import upiIcon from '@/assets/upi-icon.svg';
+import codIcon from '@/assets/cod-icon.png';
 
 const COD_CHARGE = 59;
 
@@ -474,18 +476,18 @@ const Checkout = () => {
                 >
                   <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-colors ${paymentMethod === 'upi' ? 'border-primary bg-primary/5' : 'hover:border-primary/50'}`}>
                     <RadioGroupItem value="upi" id="upi" />
-                    <Label htmlFor="upi" className="flex items-center gap-2 cursor-pointer flex-1">
-                      <CreditCard className="h-5 w-5 text-primary" />
+                    <Label htmlFor="upi" className="flex items-center gap-3 cursor-pointer flex-1">
+                      <img src={upiIcon} alt="UPI" className="h-10 w-10 object-contain" />
                       <div>
-                        <p className="font-medium">UPI Payment</p>
+                        <p className="font-medium text-primary">Online Pay</p>
                         <p className="text-sm text-muted-foreground">GPay, PhonePe, Paytm, Other UPI</p>
                       </div>
                     </Label>
                   </div>
                   <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-colors ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'hover:border-primary/50'}`}>
                     <RadioGroupItem value="cod" id="cod" />
-                    <Label htmlFor="cod" className="flex items-center gap-2 cursor-pointer flex-1">
-                      <Banknote className="h-5 w-5 text-green-600" />
+                    <Label htmlFor="cod" className="flex items-center gap-3 cursor-pointer flex-1">
+                      <img src={codIcon} alt="Cash on Delivery" className="h-10 w-10 object-contain" />
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <p className="font-medium">Cash on Delivery</p>
