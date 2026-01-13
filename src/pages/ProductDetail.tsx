@@ -18,9 +18,17 @@ interface Product {
   category_id: string | null;
 }
 
+interface ProductImage {
+  id: string;
+  image_url: string;
+  display_order: number;
+}
+
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
+  const [productImages, setProductImages] = useState<ProductImage[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
   const navigate = useNavigate();
@@ -29,17 +37,32 @@ const ProductDetail = () => {
     const fetchProduct = async () => {
       if (!id) return;
       
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', id)
-        .eq('is_active', true)
-        .maybeSingle();
+      // Fetch product and images in parallel
+      const [productResult, imagesResult] = await Promise.all([
+        supabase
+          .from('products')
+          .select('*')
+          .eq('id', id)
+          .eq('is_active', true)
+          .maybeSingle(),
+        supabase
+          .from('product_images')
+          .select('*')
+          .eq('product_id', id)
+          .order('display_order', { ascending: true })
+      ]);
 
-      if (error) {
-        console.error('Error fetching product:', error);
+      if (productResult.error) {
+        console.error('Error fetching product:', productResult.error);
       } else {
-        setProduct(data);
+        setProduct(productResult.data);
+        // Set initial selected image
+        if (imagesResult.data && imagesResult.data.length > 0) {
+          setProductImages(imagesResult.data);
+          setSelectedImage(imagesResult.data[0].image_url);
+        } else if (productResult.data?.image_url) {
+          setSelectedImage(productResult.data.image_url);
+        }
       }
       setLoading(false);
     };
@@ -113,11 +136,34 @@ const ProductDetail = () => {
             <div className="sticky top-24">
               <div className="aspect-square bg-muted rounded-lg overflow-hidden mb-4">
                 <img
-                  src={product.image_url || 'https://via.placeholder.com/600x600?text=Product'}
+                  src={selectedImage || product.image_url || 'https://via.placeholder.com/600x600?text=Product'}
                   alt={product.name}
                   className="w-full h-full object-contain"
                 />
               </div>
+              
+              {/* Thumbnail Gallery */}
+              {productImages.length > 0 && (
+                <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                  {productImages.map((img) => (
+                    <button
+                      key={img.id}
+                      onClick={() => setSelectedImage(img.image_url)}
+                      className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                        selectedImage === img.image_url 
+                          ? 'border-primary ring-2 ring-primary/20' 
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <img
+                        src={img.image_url}
+                        alt={`${product.name} thumbnail`}
+                        className="w-full h-full object-contain bg-white"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <Button
                   onClick={handleAddToCart}
