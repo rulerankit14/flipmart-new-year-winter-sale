@@ -83,10 +83,21 @@ const Checkout = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
-    address: '',
-    city: '',
     pincode: '',
+    city: '',
+    state: 'Andhra Pradesh',
+    houseNo: '',
+    roadName: '',
   });
+
+  const indianStates = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+    'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+    'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+    'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+    'Delhi', 'Jammu and Kashmir', 'Ladakh'
+  ];
 
   // Calculate original price (before discount)
   const originalTotal = items.reduce((sum, item) => sum + (item.product?.original_price || 0) * item.quantity, 0);
@@ -107,7 +118,7 @@ const Checkout = () => {
   };
 
   const validateForm = () => {
-    if (!formData.fullName || !formData.phone || !formData.address || !formData.city || !formData.pincode) {
+    if (!formData.fullName || !formData.phone || !formData.houseNo || !formData.city || !formData.pincode) {
       toast({
         title: 'Error',
         description: 'Please fill all required fields',
@@ -132,7 +143,7 @@ const Checkout = () => {
     setLoading(true);
 
     try {
-      const shippingAddress = `${formData.fullName}\n${formData.phone}\n${formData.address}\n${formData.city} - ${formData.pincode}`;
+      const shippingAddress = `${formData.fullName}\n${formData.phone}\n${formData.houseNo}, ${formData.roadName}\n${formData.city}, ${formData.state} - ${formData.pincode}`;
 
       // Create order
       const { data: order, error: orderError } = await supabase
@@ -251,9 +262,9 @@ const Checkout = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-lg font-semibold">
-            {currentStep === 'address' && 'Shipping Address'}
+            {currentStep === 'address' && 'Add delivery address'}
             {currentStep === 'summary' && 'Order Summary'}
-            {currentStep === 'payment' && 'Payment'}
+            {currentStep === 'payment' && 'Payments'}
           </h1>
         </div>
       </header>
@@ -300,95 +311,73 @@ const Checkout = () => {
       <main className="flex-1 container mx-auto px-4 py-6">
         {/* Step 1: Address */}
         {currentStep === 'address' && (
-          <div className="max-w-2xl mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle>Shipping Address</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name *</Label>
-                    <Input
-                      id="fullName"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleChange}
-                      placeholder="Enter your full name"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number *</Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      placeholder="Enter your phone number"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address *</Label>
-                  <Textarea
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    placeholder="Enter your full address"
-                    rows={3}
-                    required
-                  />
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City *</Label>
-                    <Input
-                      id="city"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleChange}
-                      placeholder="Enter your city"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pincode">Pincode *</Label>
-                    <Input
-                      id="pincode"
-                      name="pincode"
-                      value={formData.pincode}
-                      onChange={handleChange}
-                      placeholder="Enter your pincode"
-                      required
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="max-w-2xl mx-auto space-y-4">
+            <Input
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              placeholder="Full Name"
+              className="h-14 text-base bg-background"
+            />
+            <Input
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              placeholder="Mobile number"
+              className="h-14 text-base bg-background"
+            />
+            <Input
+              name="pincode"
+              value={formData.pincode}
+              onChange={handleChange}
+              placeholder="Pincode"
+              className="h-14 text-base bg-background"
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+                placeholder="City"
+                className="h-14 text-base bg-background"
+              />
+              <select
+                name="state"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                className="h-14 text-base bg-background border border-input rounded-md px-3 focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {indianStates.map((state) => (
+                  <option key={state} value={state}>{state}</option>
+                ))}
+              </select>
+            </div>
+            <Input
+              name="houseNo"
+              value={formData.houseNo}
+              onChange={handleChange}
+              placeholder="House No., Building Name"
+              className="h-14 text-base bg-background"
+            />
+            <Input
+              name="roadName"
+              value={formData.roadName}
+              onChange={handleChange}
+              placeholder="Road name, Area, Colony"
+              className="h-14 text-base bg-background"
+            />
           </div>
         )}
 
-        {/* Step 2: Order Summary */}
         {currentStep === 'summary' && (
           <div className="max-w-2xl mx-auto space-y-4">
             {/* Delivery Address */}
             <Card>
               <CardContent className="p-4">
-                <h3 className="font-semibold text-lg mb-2">Delivered to:</h3>
+                <h3 className="font-bold text-lg mb-2">Delivered to:</h3>
                 <p className="text-muted-foreground">
-                  {formData.fullName}, {formData.address}, {formData.city} - {formData.pincode}
+                  {formData.fullName}, {formData.houseNo}, {formData.roadName}, {formData.city}, {formData.state}
                 </p>
-                <p className="text-muted-foreground text-sm mt-1">Phone: {formData.phone}</p>
-                <Button 
-                  variant="link" 
-                  className="p-0 h-auto text-primary mt-2"
-                  onClick={() => setCurrentStep('address')}
-                >
-                  Change Address
-                </Button>
               </CardContent>
             </Card>
 
@@ -396,30 +385,35 @@ const Checkout = () => {
             <Card>
               <CardContent className="p-4 space-y-4">
                 {items.map((item) => (
-                  <div key={item.id} className="flex gap-4 pb-4 border-b last:border-0 last:pb-0">
-                    <img 
-                      src={item.product?.image_url || '/placeholder.svg'} 
-                      alt={item.product?.name}
-                      className="w-20 h-20 object-contain rounded bg-muted"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium line-clamp-2">{item.product?.name}</h4>
-                      <p className="text-sm text-muted-foreground mt-1">Qty: {item.quantity}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        {item.product?.original_price !== item.product?.selling_price && (
-                          <>
-                            <span className="text-green-600 font-medium text-sm">
-                              {Math.round(((item.product?.original_price || 0) - (item.product?.selling_price || 0)) / (item.product?.original_price || 1) * 100)}% off
-                            </span>
-                            <span className="text-muted-foreground line-through text-sm">
-                              ₹{(item.product?.original_price || 0).toLocaleString('en-IN')}
-                            </span>
-                          </>
-                        )}
-                        <span className="font-bold">
-                          ₹{(item.product?.selling_price || 0).toLocaleString('en-IN')}
-                        </span>
+                  <div key={item.id} className="pb-4 border-b last:border-0 last:pb-0">
+                    <div className="flex gap-4">
+                      <img 
+                        src={item.product?.image_url || '/placeholder.svg'} 
+                        alt={item.product?.name}
+                        className="w-24 h-24 object-contain rounded bg-white"
+                      />
+                      <div className="flex-1">
+                        <h4 className="font-medium line-clamp-2 text-base">{item.product?.name}</h4>
+                        {/* Assured Badge */}
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 bg-[#2874f0] text-white text-xs px-2 py-0.5 rounded">
+                            <span className="font-bold">f</span>
+                            <span>Assured</span>
+                          </span>
+                        </div>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-4 mt-3">
+                      <span className="text-muted-foreground">Qty: {item.quantity}</span>
+                      <span className="text-green-600 font-semibold">
+                        {Math.round(((item.product?.original_price || 0) - (item.product?.selling_price || 0)) / (item.product?.original_price || 1) * 100)}%
+                      </span>
+                      <span className="text-muted-foreground line-through">
+                        ₹{(item.product?.original_price || 0).toLocaleString('en-IN')}
+                      </span>
+                      <span className="font-bold text-lg">
+                        ₹{(item.product?.selling_price || 0).toLocaleString('en-IN')}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -428,12 +422,10 @@ const Checkout = () => {
 
             {/* Price Details */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Price Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="p-4 space-y-4">
+                <h3 className="font-bold text-lg border-b pb-3">Price Details</h3>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Price ({items.length} {items.length === 1 ? 'item' : 'items'})</span>
+                  <span>Price ({items.length} {items.length === 1 ? 'item' : 'items'})</span>
                   <span>₹{originalTotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between text-green-600">
@@ -450,9 +442,6 @@ const Checkout = () => {
                     <span>₹{totalAmount.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
-                <p className="text-green-600 text-sm font-medium">
-                  You will save ₹{discount.toLocaleString('en-IN')} on this order
-                </p>
               </CardContent>
             </Card>
           </div>
@@ -541,10 +530,10 @@ const Checkout = () => {
             </div>
             <Button 
               size="lg"
-              className="bg-amber-500 hover:bg-amber-600 text-white px-8"
+              className="bg-orange-500 hover:bg-orange-600 text-white px-8 font-semibold"
               onClick={currentStep === 'address' ? handleAddressContinue : handleSummaryContinue}
             >
-              Continue
+              {currentStep === 'address' ? 'Procced' : 'Continue'}
             </Button>
           </div>
         </div>
