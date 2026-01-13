@@ -7,6 +7,7 @@ import { QrCode, Check } from 'lucide-react';
 import phonePeLogo from '@/assets/phonepe-logo.png';
 import gpayLogo from '@/assets/gpay-logo.png';
 import paytmLogo from '@/assets/paytm-logo.png';
+import scanToPayIcon from '@/assets/scan-to-pay-icon.png';
 
 interface UPIPaymentProps {
   amount: number;
@@ -197,13 +198,14 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
           </button>
 
           {/* Scan To Pay Option */}
+          {/* Scan To Pay Option */}
           <button
             onClick={() => handleMethodSelect('Scan To Pay')}
             className="w-full flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
             disabled={disabled}
           >
-            <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center">
-              <span className="text-2xl">📲</span>
+            <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center">
+              <img src={scanToPayIcon} alt="Scan To Pay" className="w-12 h-12 object-contain" />
             </div>
             <span className="text-lg font-medium text-gray-800">Scan To Pay</span>
           </button>
