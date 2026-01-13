@@ -32,42 +32,31 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-primary sticky top-0 z-50 shadow-md">
-      <div className="container mx-auto px-4 py-2">
-        <div className="flex items-center justify-between gap-4">
-          {/* Logo */}
-          <Link to="/" className="flex flex-col items-start">
-            <span className="text-xl font-bold text-primary-foreground italic">Flipkart</span>
-            <span className="text-[10px] text-primary-foreground/80 flex items-center gap-1">
-              Explore <span className="text-secondary font-semibold">Plus</span>
-              <img src="https://static-assets-web.flixcart.com/batman-returns/batman-returns/p/images/header/header-sprite-3c93b4.svg" alt="" className="h-3" />
-            </span>
-          </Link>
+    <header className="bg-[#2874f0] sticky top-0 z-50">
+      <div className="px-3 py-2">
+        {/* Top Row - Logo and Cart */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 md:hidden">
+              <Menu className="h-6 w-6" />
+            </Button>
+            <Link to="/" className="flex flex-col items-start">
+              <span className="text-xl font-bold text-white italic">Flipkart</span>
+              <span className="text-[10px] text-white/90 flex items-center gap-1">
+                Explore <span className="text-yellow-400 font-semibold">Plus</span>
+                <span className="text-yellow-400">✦</span>
+              </span>
+            </Link>
+          </div>
 
-          {/* Search Bar */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-xl hidden md:block">
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="Search for products, brands and more"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-4 pr-10 py-2 rounded-sm bg-white text-foreground placeholder:text-muted-foreground"
-              />
-              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-primary">
-                <Search className="h-5 w-5" />
-              </button>
-            </div>
-          </form>
-
-          {/* Right Section */}
-          <div className="flex items-center gap-2 md:gap-4">
+          {/* Desktop Right Section */}
+          <div className="flex items-center gap-2">
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="text-primary-foreground hover:bg-primary/80 gap-1">
+                  <Button variant="ghost" className="text-white hover:bg-white/10 gap-1 hidden md:flex">
                     <User className="h-5 w-5" />
-                    <span className="hidden md:inline">Account</span>
+                    <span>Account</span>
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -103,37 +92,34 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80">
+              <Button asChild variant="ghost" className="text-white hover:bg-white/10 hidden md:flex">
                 <Link to="/login">Login</Link>
               </Button>
             )}
 
-            {/* Cart */}
-            <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80 relative">
-              <Link to="/cart" className="flex items-center gap-1">
-                <ShoppingCart className="h-5 w-5" />
-                <span className="hidden md:inline">Cart</span>
-                {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-secondary text-secondary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                    {totalItems}
-                  </span>
-                )}
-              </Link>
-            </Button>
+            {/* Cart with Badge */}
+            <Link to="/cart" className="relative p-2">
+              <ShoppingCart className="h-6 w-6 text-white" />
+              {totalItems > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-yellow-400 text-[#2874f0] text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
           </div>
         </div>
 
-        {/* Mobile Search */}
-        <form onSubmit={handleSearch} className="mt-2 md:hidden">
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="mt-2">
           <div className="relative">
             <Input
               type="text"
-              placeholder="Search for products..."
+              placeholder="Search for Products, Brands and More"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-4 pr-10 py-2 rounded-sm bg-white"
+              className="w-full pl-4 pr-10 py-2.5 rounded-sm bg-white text-foreground placeholder:text-muted-foreground text-sm border-0"
             />
-            <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-primary">
+            <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-[#2874f0]">
               <Search className="h-5 w-5" />
             </button>
           </div>

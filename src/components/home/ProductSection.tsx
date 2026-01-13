@@ -1,6 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
 import ProductCard from '@/components/products/ProductCard';
 
 interface Product {
@@ -12,42 +10,27 @@ interface Product {
 }
 
 interface ProductSectionProps {
-  title: string;
+  title?: string;
   products: Product[];
   viewAllLink?: string;
 }
 
-const ProductSection: React.FC<ProductSectionProps> = ({ title, products, viewAllLink }) => {
-  if (products.length === 0) return null;
-
+const ProductSection: React.FC<ProductSectionProps> = ({ products }) => {
   return (
-    <section className="bg-card shadow-sm">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl md:text-2xl font-bold text-foreground">{title}</h2>
-          {viewAllLink && (
-            <Link
-              to={viewAllLink}
-              className="flex items-center gap-1 text-primary hover:underline font-medium"
-            >
-              View All <ChevronRight className="h-4 w-4" />
-            </Link>
-          )}
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {products.slice(0, 10).map((product) => (
-            <ProductCard
-              key={product.id}
-              id={product.id}
-              name={product.name}
-              sellingPrice={product.selling_price}
-              originalPrice={product.original_price}
-              imageUrl={product.image_url}
-            />
-          ))}
-        </div>
+    <div className="bg-gray-100">
+      <div className="grid grid-cols-2 gap-[1px] bg-gray-200">
+        {products.map((product) => (
+          <ProductCard
+            key={product.id}
+            id={product.id}
+            name={product.name}
+            sellingPrice={product.selling_price}
+            originalPrice={product.original_price}
+            imageUrl={product.image_url}
+          />
+        ))}
       </div>
-    </section>
+    </div>
   );
 };
 

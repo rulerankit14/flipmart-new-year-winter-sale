@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { LayoutGrid, Percent, Smartphone, Shirt, Monitor, Tv } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -12,30 +13,43 @@ interface CategoryBannerProps {
   categories: Category[];
 }
 
+const defaultCategories = [
+  { name: 'Categories', icon: LayoutGrid, color: 'bg-blue-100', slug: '' },
+  { name: 'Offer Zone', icon: Percent, color: 'bg-orange-100', slug: 'offers', badge: 'NEW' },
+  { name: 'Mobiles', icon: Smartphone, color: 'bg-red-50', slug: 'mobiles' },
+  { name: 'Fashion', icon: Shirt, color: 'bg-pink-50', slug: 'fashion' },
+  { name: 'Electronics', icon: Monitor, color: 'bg-blue-50', slug: 'electronics' },
+  { name: 'Appliances', icon: Tv, color: 'bg-green-50', slug: 'appliances' },
+];
+
 const CategoryBanner: React.FC<CategoryBannerProps> = ({ categories }) => {
-  const defaultCategories = [
-    { name: 'Mobiles', icon: '📱' },
-    { name: 'Electronics', icon: '💻' },
-    { name: 'Fashion', icon: '👕' },
-    { name: 'Home', icon: '🏠' },
-    { name: 'Appliances', icon: '🔌' },
-    { name: 'Beauty', icon: '💄' },
-    { name: 'Toys', icon: '🧸' },
-    { name: 'Grocery', icon: '🛒' },
-  ];
+  const mergedCategories = defaultCategories.map(def => {
+    const found = categories.find(c => c.slug.toLowerCase() === def.slug.toLowerCase());
+    return {
+      ...def,
+      id: found?.id || def.slug,
+      imageUrl: found?.imageUrl,
+    };
+  });
 
   return (
-    <div className="bg-card shadow-sm py-4">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center overflow-x-auto gap-4 md:gap-8 pb-2">
-          {categories.length > 0 ? (
-            categories.map((category) => (
+    <div className="bg-white py-3 shadow-sm">
+      <div className="overflow-x-auto scrollbar-hide">
+        <div className="flex gap-4 px-3 min-w-max">
+          {mergedCategories.map((category, index) => {
+            const Icon = category.icon;
+            return (
               <Link
-                key={category.id}
-                to={`/category/${category.slug}`}
-                className="flex flex-col items-center min-w-[80px] hover:text-primary transition-colors"
+                key={index}
+                to={category.slug ? `/category/${category.slug}` : '/products'}
+                className="flex flex-col items-center min-w-[60px] relative"
               >
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-muted mb-2">
+                {category.badge && (
+                  <span className="absolute -top-1 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded font-bold z-10">
+                    {category.badge}
+                  </span>
+                )}
+                <div className={`w-14 h-14 rounded-full ${category.color} flex items-center justify-center mb-1.5 overflow-hidden`}>
                   {category.imageUrl ? (
                     <img
                       src={category.imageUrl}
@@ -43,27 +57,15 @@ const CategoryBanner: React.FC<CategoryBannerProps> = ({ categories }) => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl">
-                      {defaultCategories.find(c => c.name.toLowerCase() === category.name.toLowerCase())?.icon || '📦'}
-                    </div>
+                    <Icon className="h-7 w-7 text-gray-700" />
                   )}
                 </div>
-                <span className="text-xs md:text-sm font-medium text-center">{category.name}</span>
+                <span className="text-[11px] font-medium text-gray-700 text-center whitespace-nowrap">
+                  {category.name}
+                </span>
               </Link>
-            ))
-          ) : (
-            defaultCategories.map((category, index) => (
-              <div
-                key={index}
-                className="flex flex-col items-center min-w-[80px] opacity-50"
-              >
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-muted mb-2 flex items-center justify-center text-3xl">
-                  {category.icon}
-                </div>
-                <span className="text-xs md:text-sm font-medium text-center">{category.name}</span>
-              </div>
-            ))
-          )}
+            );
+          })}
         </div>
       </div>
     </div>
