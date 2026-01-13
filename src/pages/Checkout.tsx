@@ -52,8 +52,8 @@ const PayOnlinePromo = () => {
               alt={item.name}
               className={`absolute w-8 h-8 object-contain transition-all duration-500 ease-in-out ${
                 index === currentLogoIndex 
-                  ? 'opacity-100 translate-y-0' 
-                  : 'opacity-0 translate-y-4'
+                  ? 'opacity-100 translate-x-0' 
+                  : 'opacity-0 -translate-x-8'
               }`}
             />
           ))}
