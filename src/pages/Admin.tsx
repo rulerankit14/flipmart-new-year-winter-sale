@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, Image, Settings, CreditCard, Save } from 'lucide-react';
+import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, Image, Settings, CreditCard, Save, Upload, QrCode } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -25,8 +25,9 @@ const Admin = () => {
   const [productForm, setProductForm] = useState({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], stock: '', category_id: '' });
   const [categoryForm, setCategoryForm] = useState({ name: '', slug: '', image_url: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [upiSettings, setUpiSettings] = useState({ merchant_upi_id: '', merchant_name: '' });
+  const [upiSettings, setUpiSettings] = useState({ merchant_upi_id: '', merchant_name: '', merchant_qr_url: '' });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [uploadingQr, setUploadingQr] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -54,6 +55,7 @@ const Admin = () => {
       setUpiSettings({
         merchant_upi_id: settings['merchant_upi_id'] || '',
         merchant_name: settings['merchant_name'] || '',
+        merchant_qr_url: settings['merchant_qr_url'] || '',
       });
     }
     setLoading(false);
@@ -71,12 +73,50 @@ const Admin = () => {
       await supabase
         .from('settings')
         .upsert({ key: 'merchant_name', value: upiSettings.merchant_name }, { onConflict: 'key' });
+
+      // Update or insert QR URL
+      await supabase
+        .from('settings')
+        .upsert({ key: 'merchant_qr_url', value: upiSettings.merchant_qr_url }, { onConflict: 'key' });
       
       toast({ title: 'Settings saved successfully!' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingQr(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `payment-qr.${fileExt}`;
+      const filePath = fileName;
+
+      // Upload file to storage
+      const { error: uploadError } = await supabase.storage
+        .from('payment-qr')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('payment-qr')
+        .getPublicUrl(filePath);
+
+      const publicUrl = urlData.publicUrl;
+      setUpiSettings({ ...upiSettings, merchant_qr_url: publicUrl });
+
+      toast({ title: 'QR code uploaded successfully!' });
+    } catch (error: any) {
+      toast({ title: 'Error uploading QR code', description: error.message, variant: 'destructive' });
+    } finally {
+      setUploadingQr(false);
     }
   };
 
@@ -301,6 +341,57 @@ const Admin = () => {
                     <p className="text-xs text-muted-foreground">
                       This name will be displayed to customers during payment
                     </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Payment QR Code</Label>
+                    <div className="flex flex-col sm:flex-row gap-4 items-start">
+                      <div className="border rounded-lg p-4 bg-muted/50 flex flex-col items-center gap-3">
+                        {upiSettings.merchant_qr_url ? (
+                          <img 
+                            src={upiSettings.merchant_qr_url} 
+                            alt="Payment QR Code" 
+                            className="w-32 h-32 object-contain"
+                          />
+                        ) : (
+                          <div className="w-32 h-32 flex items-center justify-center bg-muted rounded-lg">
+                            <QrCode className="w-12 h-12 text-muted-foreground" />
+                          </div>
+                        )}
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleQrUpload}
+                            className="hidden"
+                            disabled={uploadingQr}
+                          />
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="pointer-events-none"
+                            disabled={uploadingQr}
+                          >
+                            {uploadingQr ? (
+                              <>Uploading...</>
+                            ) : (
+                              <>
+                                <Upload className="h-4 w-4 mr-2" />
+                                {upiSettings.merchant_qr_url ? 'Replace QR' : 'Upload QR'}
+                              </>
+                            )}
+                          </Button>
+                        </label>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground">
+                          Upload your payment QR code image. This will be shown to customers during checkout for "Scan to Pay" option.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Recommended: PNG or JPG, square aspect ratio (e.g., 400x400 pixels)
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

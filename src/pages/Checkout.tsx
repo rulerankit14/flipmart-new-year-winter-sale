@@ -79,7 +79,7 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'cod'>('upi');
   const [showCodModal, setShowCodModal] = useState(false);
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
-  const [merchantSettings, setMerchantSettings] = useState({ upiId: 'merchant@paytm', merchantName: 'Flipkart' });
+  const [merchantSettings, setMerchantSettings] = useState({ upiId: 'merchant@paytm', merchantName: 'Flipkart', qrUrl: '' });
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -112,6 +112,7 @@ const Checkout = () => {
         setMerchantSettings({
           upiId: settings['merchant_upi_id'] || 'merchant@paytm',
           merchantName: settings['merchant_name'] || 'Flipkart',
+          qrUrl: settings['merchant_qr_url'] || '',
         });
       }
     };
@@ -520,7 +521,7 @@ const Checkout = () => {
                 {paymentMethod === 'upi' && (
                   <UPIPayment
                     amount={totalAmount}
-                    qrCodeUrl={paytmQrCode}
+                    qrCodeUrl={merchantSettings.qrUrl || paytmQrCode}
                     onPaymentConfirm={handleUPIPayment}
                     disabled={loading}
                     upiId={merchantSettings.upiId}
@@ -589,7 +590,7 @@ const Checkout = () => {
             </p>
             <UPIPayment
               amount={COD_CHARGE}
-              qrCodeUrl={paytmQrCode}
+              qrCodeUrl={merchantSettings.qrUrl || paytmQrCode}
               onPaymentConfirm={handleCODConfirmPayment}
               disabled={loading}
               buttonText={`Pay ₹${COD_CHARGE} to Confirm Order`}
