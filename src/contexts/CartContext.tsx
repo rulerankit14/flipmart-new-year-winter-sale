@@ -11,6 +11,7 @@ interface CartItem {
     id: string;
     name: string;
     selling_price: number;
+    original_price: number;
     image_url: string | null;
   };
 }
@@ -59,6 +60,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id,
           name,
           selling_price,
+          original_price,
           image_url
         )
       `)

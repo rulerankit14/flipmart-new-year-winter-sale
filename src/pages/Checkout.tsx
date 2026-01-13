@@ -13,11 +13,13 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, CreditCard, Banknote, Truck } from 'lucide-react';
+import { Loader2, CheckCircle, CreditCard, Banknote, Truck, ArrowLeft, Check } from 'lucide-react';
 import UPIPayment from '@/components/checkout/UPIPayment';
 import paytmQrCode from '@/assets/paytm-qr.png';
 
 const COD_CHARGE = 59;
+
+type CheckoutStep = 'address' | 'summary' | 'payment';
 
 const Checkout = () => {
   const { items, totalAmount, clearCart } = useCart();
@@ -29,6 +31,7 @@ const Checkout = () => {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'cod'>('upi');
   const [showCodModal, setShowCodModal] = useState(false);
+  const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -37,6 +40,10 @@ const Checkout = () => {
     city: '',
     pincode: '',
   });
+
+  // Calculate original price (before discount)
+  const originalTotal = items.reduce((sum, item) => sum + (item.product?.original_price || 0) * item.quantity, 0);
+  const discount = originalTotal - totalAmount;
 
   if (!user) {
     navigate('/login');
@@ -62,6 +69,16 @@ const Checkout = () => {
       return false;
     }
     return true;
+  };
+
+  const handleAddressContinue = () => {
+    if (validateForm()) {
+      setCurrentStep('summary');
+    }
+  };
+
+  const handleSummaryContinue = () => {
+    setCurrentStep('payment');
   };
 
   const placeOrder = async (paymentId: string, paymentStatus: string) => {
@@ -123,18 +140,31 @@ const Checkout = () => {
   };
 
   const handleUPIPayment = (utrNumber: string, method: string) => {
-    if (!validateForm()) return;
     placeOrder(`UPI:${method.toUpperCase()}:${utrNumber}`, 'paid');
   };
 
   const handleCODClick = () => {
-    if (!validateForm()) return;
     setShowCodModal(true);
   };
 
   const handleCODConfirmPayment = (utrNumber: string, method: string) => {
     setShowCodModal(false);
     placeOrder(`COD:FEE_PAID:${method.toUpperCase()}:${utrNumber}`, 'cod_fee_paid');
+  };
+
+  const steps = [
+    { id: 'address', label: 'Address', number: 1 },
+    { id: 'summary', label: 'Order Summary', number: 2 },
+    { id: 'payment', label: 'Payment', number: 3 },
+  ];
+
+  const getStepStatus = (stepId: string) => {
+    const stepOrder = ['address', 'summary', 'payment'];
+    const currentIndex = stepOrder.indexOf(currentStep);
+    const stepIndex = stepOrder.indexOf(stepId);
+    if (stepIndex < currentIndex) return 'completed';
+    if (stepIndex === currentIndex) return 'current';
+    return 'upcoming';
   };
 
   if (orderPlaced) {
@@ -158,14 +188,72 @@ const Checkout = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-muted">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Checkout</h1>
+      {/* Header with back button */}
+      <header className="bg-primary text-primary-foreground py-4 sticky top-0 z-50">
+        <div className="container mx-auto px-4 flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="text-primary-foreground hover:bg-primary-foreground/10"
+            onClick={() => {
+              if (currentStep === 'address') navigate('/cart');
+              else if (currentStep === 'summary') setCurrentStep('address');
+              else setCurrentStep('summary');
+            }}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-lg font-semibold">
+            {currentStep === 'address' && 'Shipping Address'}
+            {currentStep === 'summary' && 'Order Summary'}
+            {currentStep === 'payment' && 'Payment'}
+          </h1>
+        </div>
+      </header>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Shipping Form */}
-          <div className="lg:col-span-2 space-y-6">
+      {/* Progress Steps */}
+      <div className="bg-background border-b py-4">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center gap-0">
+            {steps.map((step, index) => (
+              <React.Fragment key={step.id}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-medium ${
+                    getStepStatus(step.id) === 'completed' 
+                      ? 'bg-primary text-primary-foreground' 
+                      : getStepStatus(step.id) === 'current'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted-foreground/20 text-muted-foreground'
+                  }`}>
+                    {getStepStatus(step.id) === 'completed' ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      step.number
+                    )}
+                  </div>
+                  <span className={`text-sm hidden sm:inline ${
+                    getStepStatus(step.id) === 'current' ? 'font-semibold text-foreground' : 'text-muted-foreground'
+                  }`}>
+                    {step.label}
+                  </span>
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={`w-12 sm:w-24 h-0.5 mx-2 ${
+                    getStepStatus(steps[index + 1].id) !== 'upcoming' 
+                      ? 'bg-primary' 
+                      : 'bg-muted-foreground/20'
+                  }`} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      <main className="flex-1 container mx-auto px-4 py-6">
+        {/* Step 1: Address */}
+        {currentStep === 'address' && (
+          <div className="max-w-2xl mx-auto">
             <Card>
               <CardHeader>
                 <CardTitle>Shipping Address</CardTitle>
@@ -233,8 +321,99 @@ const Checkout = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        )}
 
-            {/* Payment Method Selection */}
+        {/* Step 2: Order Summary */}
+        {currentStep === 'summary' && (
+          <div className="max-w-2xl mx-auto space-y-4">
+            {/* Delivery Address */}
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-lg mb-2">Delivered to:</h3>
+                <p className="text-muted-foreground">
+                  {formData.fullName}, {formData.address}, {formData.city} - {formData.pincode}
+                </p>
+                <p className="text-muted-foreground text-sm mt-1">Phone: {formData.phone}</p>
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto text-primary mt-2"
+                  onClick={() => setCurrentStep('address')}
+                >
+                  Change Address
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Order Items */}
+            <Card>
+              <CardContent className="p-4 space-y-4">
+                {items.map((item) => (
+                  <div key={item.id} className="flex gap-4 pb-4 border-b last:border-0 last:pb-0">
+                    <img 
+                      src={item.product?.image_url || '/placeholder.svg'} 
+                      alt={item.product?.name}
+                      className="w-20 h-20 object-contain rounded bg-muted"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-medium line-clamp-2">{item.product?.name}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">Qty: {item.quantity}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        {item.product?.original_price !== item.product?.selling_price && (
+                          <>
+                            <span className="text-green-600 font-medium text-sm">
+                              {Math.round(((item.product?.original_price || 0) - (item.product?.selling_price || 0)) / (item.product?.original_price || 1) * 100)}% off
+                            </span>
+                            <span className="text-muted-foreground line-through text-sm">
+                              ₹{(item.product?.original_price || 0).toLocaleString('en-IN')}
+                            </span>
+                          </>
+                        )}
+                        <span className="font-bold">
+                          ₹{(item.product?.selling_price || 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Price Details */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Price Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Price ({items.length} {items.length === 1 ? 'item' : 'items'})</span>
+                  <span>₹{originalTotal.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-green-600">
+                  <span>Discount</span>
+                  <span>- ₹{discount.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between text-green-600">
+                  <span>Delivery Charges</span>
+                  <span>FREE Delivery</span>
+                </div>
+                <div className="border-t border-dashed pt-3">
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total Amount</span>
+                    <span>₹{totalAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+                <p className="text-green-600 text-sm font-medium">
+                  You will save ₹{discount.toLocaleString('en-IN')} on this order
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Step 3: Payment */}
+        {currentStep === 'payment' && (
+          <div className="max-w-2xl mx-auto">
             <Card>
               <CardHeader>
                 <CardTitle>Payment Method</CardTitle>
@@ -245,7 +424,7 @@ const Checkout = () => {
                   onValueChange={(value) => setPaymentMethod(value as 'upi' | 'cod')}
                   className="space-y-3"
                 >
-                  <div className="flex items-center space-x-3 p-4 rounded-lg border-2 border-primary bg-primary/5">
+                  <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-colors ${paymentMethod === 'upi' ? 'border-primary bg-primary/5' : 'hover:border-primary/50'}`}>
                     <RadioGroupItem value="upi" id="upi" />
                     <Label htmlFor="upi" className="flex items-center gap-2 cursor-pointer flex-1">
                       <CreditCard className="h-5 w-5 text-primary" />
@@ -255,7 +434,7 @@ const Checkout = () => {
                       </div>
                     </Label>
                   </div>
-                  <div className="flex items-center space-x-3 p-4 rounded-lg border-2 hover:border-primary/50 transition-colors">
+                  <div className={`flex items-center space-x-3 p-4 rounded-lg border-2 transition-colors ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'hover:border-primary/50'}`}>
                     <RadioGroupItem value="cod" id="cod" />
                     <Label htmlFor="cod" className="flex items-center gap-2 cursor-pointer flex-1">
                       <Banknote className="h-5 w-5 text-green-600" />
@@ -278,43 +457,6 @@ const Checkout = () => {
                     disabled={loading}
                   />
                 )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <Card className="sticky top-24">
-              <CardContent className="p-6">
-                <h2 className="text-lg font-semibold mb-4 uppercase text-muted-foreground">
-                  Order Summary
-                </h2>
-                <div className="space-y-3 text-sm">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        {item.product?.name} × {item.quantity}
-                      </span>
-                      <span>₹{((item.product?.selling_price || 0) * item.quantity).toLocaleString('en-IN')}</span>
-                    </div>
-                  ))}
-                  <div className="border-t pt-3 mt-3">
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span>₹{totalAmount.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between text-green-600">
-                      <span>Delivery</span>
-                      <span>FREE</span>
-                    </div>
-                  </div>
-                  <div className="border-t pt-3 mt-3">
-                    <div className="flex justify-between font-bold text-lg">
-                      <span>Total</span>
-                      <span>₹{totalAmount.toLocaleString('en-IN')}</span>
-                    </div>
-                  </div>
-                </div>
 
                 {paymentMethod === 'cod' && (
                   <Button
@@ -333,16 +475,31 @@ const Checkout = () => {
                     )}
                   </Button>
                 )}
-
-                <p className="text-xs text-muted-foreground text-center mt-4">
-                  By placing this order, you agree to our terms and conditions.
-                </p>
               </CardContent>
             </Card>
           </div>
-        </div>
+        )}
       </main>
       
+      {/* Sticky Bottom Bar */}
+      {(currentStep === 'address' || currentStep === 'summary') && (
+        <div className="sticky bottom-0 bg-background border-t p-4">
+          <div className="container mx-auto flex items-center justify-between max-w-2xl">
+            <div>
+              <p className="text-muted-foreground line-through text-sm">₹{originalTotal.toLocaleString('en-IN')}</p>
+              <p className="text-xl font-bold">₹{totalAmount.toLocaleString('en-IN')}</p>
+            </div>
+            <Button 
+              size="lg"
+              className="bg-amber-500 hover:bg-amber-600 text-white px-8"
+              onClick={currentStep === 'address' ? handleAddressContinue : handleSummaryContinue}
+            >
+              Continue
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Footer />
 
       {/* COD Confirmation Modal */}
