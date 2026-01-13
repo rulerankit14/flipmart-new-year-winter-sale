@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Zap, Star, Truck, Shield, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, Zap, Star, Truck, Shield, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 
 interface Product {
@@ -27,8 +27,8 @@ interface ProductImage {
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
-  const [productImages, setProductImages] = useState<ProductImage[]>([]);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [allImages, setAllImages] = useState<string[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
   const navigate = useNavigate();
@@ -56,13 +56,14 @@ const ProductDetail = () => {
         console.error('Error fetching product:', productResult.error);
       } else {
         setProduct(productResult.data);
-        // Set initial selected image
+        // Build images array from product_images table
+        const images: string[] = [];
         if (imagesResult.data && imagesResult.data.length > 0) {
-          setProductImages(imagesResult.data);
-          setSelectedImage(imagesResult.data[0].image_url);
+          images.push(...imagesResult.data.map(img => img.image_url));
         } else if (productResult.data?.image_url) {
-          setSelectedImage(productResult.data.image_url);
+          images.push(productResult.data.image_url);
         }
+        setAllImages(images);
       }
       setLoading(false);
     };
@@ -81,6 +82,14 @@ const ProductDetail = () => {
       addToCart(product.id);
       navigate('/cart');
     }
+  };
+
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
   };
 
   if (loading) {
@@ -134,36 +143,44 @@ const ProductDetail = () => {
           <div className="grid md:grid-cols-2 gap-8">
             {/* Product Image */}
             <div className="sticky top-24">
-              <div className="aspect-square bg-muted rounded-lg overflow-hidden mb-4">
+              <div className="relative aspect-square bg-white rounded-lg overflow-hidden mb-4">
                 <img
-                  src={selectedImage || product.image_url || 'https://via.placeholder.com/600x600?text=Product'}
+                  src={allImages[currentImageIndex] || product.image_url || 'https://via.placeholder.com/600x600?text=Product'}
                   alt={product.name}
                   className="w-full h-full object-contain"
                 />
-              </div>
-              
-              {/* Thumbnail Gallery */}
-              {productImages.length > 0 && (
-                <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-                  {productImages.map((img) => (
+                
+                {/* Left/Right Navigation Arrows */}
+                {allImages.length > 1 && (
+                  <>
                     <button
-                      key={img.id}
-                      onClick={() => setSelectedImage(img.image_url)}
-                      className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                        selectedImage === img.image_url 
-                          ? 'border-primary ring-2 ring-primary/20' 
-                          : 'border-border hover:border-primary/50'
-                      }`}
+                      onClick={handlePrevImage}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-md transition-colors"
                     >
-                      <img
-                        src={img.image_url}
-                        alt={`${product.name} thumbnail`}
-                        className="w-full h-full object-contain bg-white"
-                      />
+                      <ChevronLeft className="h-5 w-5 text-gray-700" />
                     </button>
-                  ))}
-                </div>
-              )}
+                    <button
+                      onClick={handleNextImage}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-md transition-colors"
+                    >
+                      <ChevronRight className="h-5 w-5 text-gray-700" />
+                    </button>
+                    
+                    {/* Dot indicators */}
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                      {allImages.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setCurrentImageIndex(index)}
+                          className={`w-2 h-2 rounded-full transition-colors ${
+                            index === currentImageIndex ? 'bg-primary' : 'bg-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <Button
                   onClick={handleAddToCart}
