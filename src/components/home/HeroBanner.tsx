@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import winterSaleBanner from '@/assets/winter-sale-banner.jpg';
 
 const banners = [
   {
     id: 1,
-    image: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=800&h=400&fit=crop',
-    gradient: 'from-pink-400 via-pink-300 to-blue-300',
+    image: winterSaleBanner,
   },
   {
     id: 2,
-    image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=400&fit=crop',
-    gradient: 'from-blue-400 via-cyan-300 to-teal-300',
+    image: winterSaleBanner,
   },
   {
     id: 3,
-    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=400&fit=crop',
-    gradient: 'from-purple-400 via-pink-300 to-red-300',
+    image: winterSaleBanner,
   },
 ];
 
@@ -39,21 +37,13 @@ const HeroBanner = () => {
           {banners.map((banner) => (
             <div
               key={banner.id}
-              className={`min-w-full h-full relative bg-gradient-to-r ${banner.gradient}`}
+              className="min-w-full h-full relative"
             >
               <img
                 src={banner.image}
-                alt="Sale Banner"
-                className="w-full h-full object-cover mix-blend-overlay opacity-80"
+                alt="Winter Sale Banner"
+                className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <h2 className="text-3xl md:text-5xl font-bold text-white drop-shadow-lg">
-                    SALE IS NOW LIVE
-                  </h2>
-                  <p className="text-lg md:text-2xl text-white/90 mt-2">Up to 95% OFF</p>
-                </div>
-              </div>
             </div>
           ))}
         </div>
