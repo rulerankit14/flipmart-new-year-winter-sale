@@ -79,6 +79,7 @@ const Checkout = () => {
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'cod'>('upi');
   const [showCodModal, setShowCodModal] = useState(false);
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
+  const [merchantSettings, setMerchantSettings] = useState({ upiId: 'merchant@paytm', merchantName: 'Flipkart' });
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -98,6 +99,24 @@ const Checkout = () => {
     'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
     'Delhi', 'Jammu and Kashmir', 'Ladakh'
   ];
+
+  // Fetch merchant settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase.from('settings').select('*');
+      if (data) {
+        const settings: { [key: string]: string } = {};
+        data.forEach((s: any) => {
+          settings[s.key] = s.value;
+        });
+        setMerchantSettings({
+          upiId: settings['merchant_upi_id'] || 'merchant@paytm',
+          merchantName: settings['merchant_name'] || 'Flipkart',
+        });
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Calculate original price (before discount)
   const originalTotal = items.reduce((sum, item) => sum + (item.product?.original_price || 0) * item.quantity, 0);
@@ -504,6 +523,8 @@ const Checkout = () => {
                     qrCodeUrl={paytmQrCode}
                     onPaymentConfirm={handleUPIPayment}
                     disabled={loading}
+                    upiId={merchantSettings.upiId}
+                    merchantName={merchantSettings.merchantName}
                   />
                 )}
 
@@ -572,6 +593,8 @@ const Checkout = () => {
               onPaymentConfirm={handleCODConfirmPayment}
               disabled={loading}
               buttonText={`Pay ₹${COD_CHARGE} to Confirm Order`}
+              upiId={merchantSettings.upiId}
+              merchantName={merchantSettings.merchantName}
             />
             <Button
               variant="outline"

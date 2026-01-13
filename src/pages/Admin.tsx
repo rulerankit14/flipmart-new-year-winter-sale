@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, Image } from 'lucide-react';
+import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, Image, Settings, CreditCard, Save } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -25,6 +25,8 @@ const Admin = () => {
   const [productForm, setProductForm] = useState({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], stock: '', category_id: '' });
   const [categoryForm, setCategoryForm] = useState({ name: '', slug: '', image_url: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [upiSettings, setUpiSettings] = useState({ merchant_upi_id: '', merchant_name: '' });
+  const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -35,15 +37,47 @@ const Admin = () => {
   }, [user, isAdmin, authLoading, navigate]);
 
   const fetchData = async () => {
-    const [productsRes, categoriesRes, ordersRes] = await Promise.all([
+    const [productsRes, categoriesRes, ordersRes, settingsRes] = await Promise.all([
       supabase.from('products').select('*').order('created_at', { ascending: false }),
       supabase.from('categories').select('*').order('name'),
       supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(50),
+      supabase.from('settings').select('*'),
     ]);
     if (productsRes.data) setProducts(productsRes.data);
     if (categoriesRes.data) setCategories(categoriesRes.data);
     if (ordersRes.data) setOrders(ordersRes.data);
+    if (settingsRes.data) {
+      const settings: { [key: string]: string } = {};
+      settingsRes.data.forEach((s: any) => {
+        settings[s.key] = s.value;
+      });
+      setUpiSettings({
+        merchant_upi_id: settings['merchant_upi_id'] || '',
+        merchant_name: settings['merchant_name'] || '',
+      });
+    }
     setLoading(false);
+  };
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      // Update or insert UPI ID
+      await supabase
+        .from('settings')
+        .upsert({ key: 'merchant_upi_id', value: upiSettings.merchant_upi_id }, { onConflict: 'key' });
+      
+      // Update or insert merchant name
+      await supabase
+        .from('settings')
+        .upsert({ key: 'merchant_name', value: upiSettings.merchant_name }, { onConflict: 'key' });
+      
+      toast({ title: 'Settings saved successfully!' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingSettings(false);
+    }
   };
 
   const handleAddProduct = async () => {
@@ -128,7 +162,12 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="products">
-          <TabsList><TabsTrigger value="products">Products</TabsTrigger><TabsTrigger value="categories">Categories</TabsTrigger><TabsTrigger value="orders">Orders</TabsTrigger></TabsList>
+          <TabsList>
+            <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
           
           <TabsContent value="products" className="mt-4">
             <Card>
@@ -223,6 +262,58 @@ const Admin = () => {
                 <TableBody>{orders.map(o => (<TableRow key={o.id}><TableCell className="font-mono">{o.id.slice(0,8)}...</TableCell><TableCell>₹{o.total_amount}</TableCell><TableCell>{o.status}</TableCell><TableCell>{new Date(o.created_at).toLocaleDateString()}</TableCell></TableRow>))}</TableBody>
               </Table>
             </CardContent></Card>
+          </TabsContent>
+
+          <TabsContent value="settings" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Payment Settings
+                </CardTitle>
+                <CardDescription>
+                  Configure your UPI payment settings for receiving customer payments
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="merchant_upi_id">Merchant UPI ID</Label>
+                    <Input
+                      id="merchant_upi_id"
+                      placeholder="yourname@paytm"
+                      value={upiSettings.merchant_upi_id}
+                      onChange={(e) => setUpiSettings({ ...upiSettings, merchant_upi_id: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This UPI ID will be used for receiving all customer payments (e.g., yourname@paytm, yourname@upi)
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="merchant_name">Merchant/Business Name</Label>
+                    <Input
+                      id="merchant_name"
+                      placeholder="Your Business Name"
+                      value={upiSettings.merchant_name}
+                      onChange={(e) => setUpiSettings({ ...upiSettings, merchant_name: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This name will be displayed to customers during payment
+                    </p>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={handleSaveSettings} 
+                  disabled={savingSettings}
+                  className="w-full sm:w-auto"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {savingSettings ? 'Saving...' : 'Save Settings'}
+                </Button>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
