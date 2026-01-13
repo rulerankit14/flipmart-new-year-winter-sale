@@ -29,6 +29,8 @@ const ProductDetail = () => {
   const [allImages, setAllImages] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
@@ -81,6 +83,33 @@ const ProductDetail = () => {
     }
   };
 
+  // Swipe gesture handlers
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe && allImages.length > 1) {
+      setCurrentImageIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
+    }
+    if (isRightSwipe && allImages.length > 1) {
+      setCurrentImageIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
+    }
+  };
+
   const discountPercent = product 
     ? Math.round((1 - product.selling_price / product.original_price) * 100) 
     : 0;
@@ -125,9 +154,14 @@ const ProductDetail = () => {
       
       <main className="flex-1">
         {/* Image Slider Section */}
-        <div className="relative bg-white">
+        <div 
+          className="relative bg-white"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
           {/* Main Image */}
-          <div className="aspect-square bg-white flex items-center justify-center">
+          <div className="aspect-square bg-white flex items-center justify-center select-none">
             <img
               src={allImages[currentImageIndex] || product.image_url || 'https://via.placeholder.com/600x600?text=Product'}
               alt={product.name}
