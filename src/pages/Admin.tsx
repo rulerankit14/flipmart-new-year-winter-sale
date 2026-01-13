@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Edit, Package, ShoppingCart, Users } from 'lucide-react';
+import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, Image } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -22,7 +22,7 @@ const Admin = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [productForm, setProductForm] = useState({ name: '', description: '', original_price: '', selling_price: '', image_url: '', stock: '', category_id: '' });
+  const [productForm, setProductForm] = useState({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], stock: '', category_id: '' });
   const [categoryForm, setCategoryForm] = useState({ name: '', slug: '', image_url: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -47,17 +47,51 @@ const Admin = () => {
   };
 
   const handleAddProduct = async () => {
-    const { error } = await supabase.from('products').insert({
+    const validImageUrls = productForm.image_urls.filter(url => url.trim() !== '');
+    const { data: productData, error } = await supabase.from('products').insert({
       name: productForm.name,
       description: productForm.description,
       original_price: parseFloat(productForm.original_price),
       selling_price: parseFloat(productForm.selling_price),
-      image_url: productForm.image_url || null,
+      image_url: validImageUrls[0] || null,
       stock: parseInt(productForm.stock) || 0,
       category_id: productForm.category_id || null,
-    });
-    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    else { toast({ title: 'Product added!' }); setProductForm({ name: '', description: '', original_price: '', selling_price: '', image_url: '', stock: '', category_id: '' }); setDialogOpen(false); fetchData(); }
+    }).select().single();
+    
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return;
+    }
+    
+    // Add additional images to product_images table
+    if (validImageUrls.length > 0 && productData) {
+      const imageInserts = validImageUrls.map((url, index) => ({
+        product_id: productData.id,
+        image_url: url,
+        display_order: index
+      }));
+      await supabase.from('product_images').insert(imageInserts);
+    }
+    
+    toast({ title: 'Product added!' }); 
+    setProductForm({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], stock: '', category_id: '' }); 
+    setDialogOpen(false); 
+    fetchData();
+  };
+
+  const addImageField = () => {
+    setProductForm({ ...productForm, image_urls: [...productForm.image_urls, ''] });
+  };
+
+  const removeImageField = (index: number) => {
+    const newUrls = productForm.image_urls.filter((_, i) => i !== index);
+    setProductForm({ ...productForm, image_urls: newUrls.length > 0 ? newUrls : [''] });
+  };
+
+  const updateImageUrl = (index: number, value: string) => {
+    const newUrls = [...productForm.image_urls];
+    newUrls[index] = value;
+    setProductForm({ ...productForm, image_urls: newUrls });
   };
 
   const handleAddCategory = async () => {
@@ -102,13 +136,37 @@ const Admin = () => {
                 <CardTitle>Products</CardTitle>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add Product</Button></DialogTrigger>
-                  <DialogContent><DialogHeader><DialogTitle>Add Product</DialogTitle></DialogHeader>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>Add Product</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div><Label>Name</Label><Input value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} /></div>
                       <div><Label>Original Price (₹)</Label><Input type="number" value={productForm.original_price} onChange={e => setProductForm({...productForm, original_price: e.target.value})} /></div>
                       <div><Label>Selling Price (₹)</Label><Input type="number" value={productForm.selling_price} onChange={e => setProductForm({...productForm, selling_price: e.target.value})} /></div>
                       <div><Label>Stock</Label><Input type="number" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} /></div>
-                      <div><Label>Image URL</Label><Input value={productForm.image_url} onChange={e => setProductForm({...productForm, image_url: e.target.value})} /></div>
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <Label>Product Images</Label>
+                          <Button type="button" variant="outline" size="sm" onClick={addImageField}>
+                            <Plus className="h-4 w-4 mr-1" />Add Image
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          {productForm.image_urls.map((url, index) => (
+                            <div key={index} className="flex gap-2 items-center">
+                              <Input 
+                                placeholder={`Image URL ${index + 1}`}
+                                value={url} 
+                                onChange={e => updateImageUrl(index, e.target.value)} 
+                              />
+                              {productForm.image_urls.length > 1 && (
+                                <Button type="button" variant="ghost" size="sm" onClick={() => removeImageField(index)}>
+                                  <X className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">First image will be the main product image</p>
+                      </div>
                       <div><Label>Description</Label><Textarea value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} /></div>
                       <Button onClick={handleAddProduct} className="w-full">Add Product</Button>
                     </div>
