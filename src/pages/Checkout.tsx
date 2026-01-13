@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -16,10 +16,55 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, CheckCircle, CreditCard, Banknote, Truck, ArrowLeft, Check } from 'lucide-react';
 import UPIPayment from '@/components/checkout/UPIPayment';
 import paytmQrCode from '@/assets/paytm-qr.png';
+import phonePeLogo from '@/assets/phonepe-logo.png';
+import gpayLogo from '@/assets/gpay-logo.png';
+import paytmLogo from '@/assets/paytm-logo.png';
 
 const COD_CHARGE = 59;
 
 type CheckoutStep = 'address' | 'summary' | 'payment';
+
+// Payment logos for rotating banner
+const paymentLogos = [
+  { id: 'phonepe', logo: phonePeLogo, name: 'PhonePe' },
+  { id: 'gpay', logo: gpayLogo, name: 'GPay' },
+  { id: 'paytm', logo: paytmLogo, name: 'Paytm' },
+];
+
+const PayOnlinePromo = () => {
+  const [currentLogoIndex, setCurrentLogoIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentLogoIndex((prev) => (prev + 1) % paymentLogos.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 mb-4 border border-blue-200">
+      <div className="flex items-center gap-3">
+        <div className="relative w-10 h-10 overflow-hidden rounded-lg bg-white flex items-center justify-center shadow-sm">
+          {paymentLogos.map((item, index) => (
+            <img
+              key={item.id}
+              src={item.logo}
+              alt={item.name}
+              className={`absolute w-8 h-8 object-contain transition-all duration-500 ease-in-out ${
+                index === currentLogoIndex 
+                  ? 'opacity-100 translate-y-0' 
+                  : 'opacity-0 translate-y-4'
+              }`}
+            />
+          ))}
+        </div>
+        <p className="text-primary font-semibold text-base">
+          Pay online & get EXTRA <span className="text-green-600">₹33 off</span>
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const Checkout = () => {
   const { items, totalAmount, clearCart } = useCart();
@@ -414,6 +459,9 @@ const Checkout = () => {
         {/* Step 3: Payment */}
         {currentStep === 'payment' && (
           <div className="max-w-2xl mx-auto">
+            {/* Pay Online Promo Banner */}
+            <PayOnlinePromo />
+            
             <Card>
               <CardHeader>
                 <CardTitle>Payment Method</CardTitle>
