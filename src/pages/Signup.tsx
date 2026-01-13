@@ -16,6 +16,19 @@ const Signup = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const validatePassword = (pwd: string) => {
+    const hasLetter = /[a-zA-Z]/.test(pwd);
+    const hasNumber = /[0-9]/.test(pwd);
+    return {
+      isValid: pwd.length >= 6 && hasLetter && hasNumber,
+      hasLetter,
+      hasNumber,
+      hasMinLength: pwd.length >= 6,
+    };
+  };
+
+  const passwordValidation = validatePassword(password);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -28,10 +41,10 @@ const Signup = () => {
       return;
     }
 
-    if (password.length < 6) {
+    if (!passwordValidation.isValid) {
       toast({
-        title: 'Error',
-        description: 'Password must be at least 6 characters',
+        title: 'Weak Password',
+        description: 'Password must be at least 6 characters and contain both letters and numbers',
         variant: 'destructive',
       });
       return;
@@ -91,6 +104,22 @@ const Signup = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              {password.length > 0 && (
+                <div className="space-y-1 text-xs">
+                  <div className={`flex items-center gap-1 ${passwordValidation.hasMinLength ? 'text-green-600' : 'text-red-500'}`}>
+                    <span>{passwordValidation.hasMinLength ? '✓' : '✗'}</span>
+                    <span>At least 6 characters</span>
+                  </div>
+                  <div className={`flex items-center gap-1 ${passwordValidation.hasLetter ? 'text-green-600' : 'text-red-500'}`}>
+                    <span>{passwordValidation.hasLetter ? '✓' : '✗'}</span>
+                    <span>Contains letters (a-z, A-Z)</span>
+                  </div>
+                  <div className={`flex items-center gap-1 ${passwordValidation.hasNumber ? 'text-green-600' : 'text-red-500'}`}>
+                    <span>{passwordValidation.hasNumber ? '✓' : '✗'}</span>
+                    <span>Contains numbers (0-9)</span>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
