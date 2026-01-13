@@ -25,6 +25,9 @@ const Admin = () => {
   const [productForm, setProductForm] = useState({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], stock: '', category_id: '' });
   const [categoryForm, setCategoryForm] = useState({ name: '', slug: '', image_url: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], stock: '', category_id: '' });
   const [upiSettings, setUpiSettings] = useState({ merchant_upi_id: '', merchant_name: '', merchant_qr_url: '' });
   const [savingSettings, setSavingSettings] = useState(false);
   const [uploadingQr, setUploadingQr] = useState(false);
@@ -184,6 +187,87 @@ const Admin = () => {
     }
   };
 
+  const handleEditProduct = async (product: any) => {
+    setEditingProduct(product);
+    // Fetch product images
+    const { data: images } = await supabase
+      .from('product_images')
+      .select('*')
+      .eq('product_id', product.id)
+      .order('display_order', { ascending: true });
+    
+    const imageUrls = images && images.length > 0 
+      ? images.map((img: any) => img.image_url) 
+      : [product.image_url || ''];
+    
+    setEditForm({
+      name: product.name || '',
+      description: product.description || '',
+      original_price: product.original_price?.toString() || '',
+      selling_price: product.selling_price?.toString() || '',
+      image_urls: imageUrls,
+      stock: product.stock?.toString() || '',
+      category_id: product.category_id || '',
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateProduct = async () => {
+    if (!editingProduct) return;
+    
+    const validImageUrls = editForm.image_urls.filter(url => url.trim() !== '');
+    
+    const { error } = await supabase
+      .from('products')
+      .update({
+        name: editForm.name,
+        description: editForm.description,
+        original_price: parseFloat(editForm.original_price),
+        selling_price: parseFloat(editForm.selling_price),
+        image_url: validImageUrls[0] || null,
+        stock: parseInt(editForm.stock) || 0,
+        category_id: editForm.category_id || null,
+      })
+      .eq('id', editingProduct.id);
+    
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return;
+    }
+    
+    // Delete existing images and re-insert
+    await supabase.from('product_images').delete().eq('product_id', editingProduct.id);
+    
+    if (validImageUrls.length > 0) {
+      const imageInserts = validImageUrls.map((url, index) => ({
+        product_id: editingProduct.id,
+        image_url: url,
+        display_order: index
+      }));
+      await supabase.from('product_images').insert(imageInserts);
+    }
+    
+    toast({ title: 'Product updated!' });
+    setEditDialogOpen(false);
+    setEditingProduct(null);
+    fetchData();
+  };
+
+  const addEditImageField = () => {
+    setEditForm({ ...editForm, image_urls: [...editForm.image_urls, ''] });
+  };
+
+  const removeEditImageField = (index: number) => {
+    const newUrls = editForm.image_urls.filter((_, i) => i !== index);
+    setEditForm({ ...editForm, image_urls: newUrls.length > 0 ? newUrls : [''] });
+  };
+
+  const updateEditImageUrl = (index: number, value: string) => {
+    const newUrls = [...editForm.image_urls];
+    newUrls[index] = value;
+    setEditForm({ ...editForm, image_urls: newUrls });
+  };
+
   if (authLoading || loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   return (
@@ -260,7 +344,10 @@ const Admin = () => {
                       <TableCell>₹{p.original_price}</TableCell>
                       <TableCell>₹{p.selling_price}</TableCell>
                       <TableCell>{p.stock}</TableCell>
-                      <TableCell>
+                      <TableCell className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEditProduct(p)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /></Button>
@@ -286,6 +373,46 @@ const Admin = () => {
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Edit Product Dialog */}
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+              <DialogContent className="max-h-[90vh] overflow-y-auto">
+                <DialogHeader><DialogTitle>Edit Product</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <div><Label>Name</Label><Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} /></div>
+                  <div><Label>Original Price (₹)</Label><Input type="number" value={editForm.original_price} onChange={e => setEditForm({...editForm, original_price: e.target.value})} /></div>
+                  <div><Label>Selling Price (₹)</Label><Input type="number" value={editForm.selling_price} onChange={e => setEditForm({...editForm, selling_price: e.target.value})} /></div>
+                  <div><Label>Stock</Label><Input type="number" value={editForm.stock} onChange={e => setEditForm({...editForm, stock: e.target.value})} /></div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label>Product Images</Label>
+                      <Button type="button" variant="outline" size="sm" onClick={addEditImageField}>
+                        <Plus className="h-4 w-4 mr-1" />Add Image
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {editForm.image_urls.map((url, index) => (
+                        <div key={index} className="flex gap-2 items-center">
+                          <Input 
+                            placeholder={`Image URL ${index + 1}`}
+                            value={url} 
+                            onChange={e => updateEditImageUrl(index, e.target.value)} 
+                          />
+                          {editForm.image_urls.length > 1 && (
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removeEditImageField(index)}>
+                              <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">First image will be the main product image</p>
+                  </div>
+                  <div><Label>Description</Label><Textarea value={editForm.description} onChange={e => setEditForm({...editForm, description: e.target.value})} /></div>
+                  <Button onClick={handleUpdateProduct} className="w-full">Update Product</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
           
           <TabsContent value="categories" className="mt-4">
