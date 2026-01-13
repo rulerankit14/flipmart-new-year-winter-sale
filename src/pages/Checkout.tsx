@@ -13,7 +13,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle, Truck, ArrowLeft, Check } from 'lucide-react';
+import { Loader2, CheckCircle, Truck, ArrowLeft, Check, Shield } from 'lucide-react';
 import UPIPayment from '@/components/checkout/UPIPayment';
 import paytmQrCode from '@/assets/paytm-qr.png';
 import phonePeLogo from '@/assets/phonepe-logo.png';
@@ -370,80 +370,90 @@ const Checkout = () => {
         )}
 
         {currentStep === 'summary' && (
-          <div className="max-w-2xl mx-auto space-y-4">
+          <div className="max-w-2xl mx-auto space-y-0">
             {/* Delivery Address */}
-            <Card>
-              <CardContent className="p-4">
-                <h3 className="font-bold text-lg mb-2">Delivered to:</h3>
-                <p className="text-muted-foreground">
-                  {formData.fullName}, {formData.houseNo}, {formData.roadName}, {formData.city}, {formData.state}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="bg-background p-4 border-b">
+              <h3 className="font-bold text-lg mb-1">Delivered to:</h3>
+              <p className="text-muted-foreground text-sm">
+                {formData.houseNo}, {formData.roadName}, {formData.state}
+              </p>
+            </div>
 
             {/* Order Items */}
-            <Card>
-              <CardContent className="p-4 space-y-4">
-                {items.map((item) => (
-                  <div key={item.id} className="pb-4 border-b last:border-0 last:pb-0">
-                    <div className="flex gap-4">
-                      <img 
-                        src={item.product?.image_url || '/placeholder.svg'} 
-                        alt={item.product?.name}
-                        className="w-24 h-24 object-contain rounded bg-white"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-medium line-clamp-2 text-base">{item.product?.name}</h4>
-                        {/* Assured Badge */}
-                        <div className="mt-1">
-                          <span className="inline-flex items-center gap-1 bg-[#2874f0] text-white text-xs px-2 py-0.5 rounded">
-                            <span className="font-bold">f</span>
-                            <span>Assured</span>
-                          </span>
-                        </div>
+            <div className="bg-background p-4 border-b">
+              {items.map((item) => (
+                <div key={item.id} className="pb-4 last:pb-0">
+                  <div className="flex gap-4">
+                    <img 
+                      src={item.product?.image_url || '/placeholder.svg'} 
+                      alt={item.product?.name}
+                      className="w-20 h-20 object-contain rounded bg-white border"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-medium line-clamp-2 text-base">{item.product?.name}</h4>
+                      {/* Assured Badge */}
+                      <div className="mt-2">
+                        <span className="inline-flex items-center gap-1 bg-[#2874f0] text-white text-xs px-2 py-0.5 rounded">
+                          <span className="font-bold italic">f</span>
+                          <span>Assured</span>
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 mt-3">
-                      <span className="text-muted-foreground">Qty: {item.quantity}</span>
-                      <span className="text-green-600 font-semibold">
-                        {Math.round(((item.product?.original_price || 0) - (item.product?.selling_price || 0)) / (item.product?.original_price || 1) * 100)}%
-                      </span>
-                      <span className="text-muted-foreground line-through">
-                        ₹{(item.product?.original_price || 0).toLocaleString('en-IN')}
-                      </span>
-                      <span className="font-bold text-lg">
-                        ₹{(item.product?.selling_price || 0).toLocaleString('en-IN')}
-                      </span>
-                    </div>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
+                  <div className="flex items-center gap-3 mt-3">
+                    <span className="text-muted-foreground">Qty: {item.quantity}</span>
+                    <span className="text-green-600 font-semibold">
+                      {Math.round(((item.product?.original_price || 0) - (item.product?.selling_price || 0)) / (item.product?.original_price || 1) * 100)}%
+                    </span>
+                    <span className="text-muted-foreground line-through text-sm">
+                      ₹{(item.product?.original_price || 0).toLocaleString('en-IN')}
+                    </span>
+                    <span className="font-bold text-lg">
+                      ₹{(item.product?.selling_price || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
 
             {/* Price Details */}
-            <Card>
-              <CardContent className="p-4 space-y-4">
-                <h3 className="font-bold text-lg border-b pb-3">Price Details</h3>
-                <div className="flex justify-between">
+            <div className="bg-background p-4 border-b">
+              <h3 className="font-bold text-lg mb-4">Price Details</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
                   <span>Price ({items.length} {items.length === 1 ? 'item' : 'items'})</span>
                   <span>₹{originalTotal.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between text-green-600">
+                <div className="flex justify-between text-sm text-green-600">
                   <span>Discount</span>
                   <span>- ₹{discount.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between text-green-600">
+                <div className="flex justify-between text-sm">
                   <span>Delivery Charges</span>
-                  <span>FREE Delivery</span>
+                  <span className="text-green-600">FREE Delivery</span>
                 </div>
-                <div className="border-t border-dashed pt-3">
-                  <div className="flex justify-between font-bold text-lg">
+                <div className="border-t border-dashed pt-3 mt-3">
+                  <div className="flex justify-between font-bold">
                     <span>Total Amount</span>
                     <span>₹{totalAmount.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <p className="text-green-600 font-medium text-sm pt-2">
+                  You will save - ₹{discount.toLocaleString('en-IN')} on this order
+                </p>
+              </div>
+            </div>
+
+            {/* Safe and Secure Banner */}
+            <div className="bg-gray-100 p-4 flex items-center gap-3">
+              <Shield className="h-8 w-8 text-gray-500" />
+              <div>
+                <p className="text-sm text-gray-700">
+                  <span className="font-medium">Safe and secure payments.</span> Easy returns.
+                </p>
+                <p className="text-sm text-gray-700">100% Authentic products.</p>
+              </div>
+            </div>
           </div>
         )}
 
