@@ -49,14 +49,14 @@ const Header = () => {
             </Link>
           </div>
 
-          {/* Desktop Right Section */}
-          <div className="flex items-center gap-2">
+          {/* Right Section */}
+          <div className="flex items-center gap-1">
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="text-white hover:bg-white/10 gap-1 hidden md:flex">
+                  <Button variant="ghost" className="text-white hover:bg-white/10 gap-1 px-2">
                     <User className="h-5 w-5" />
-                    <span>Account</span>
+                    <span className="hidden md:inline">Account</span>
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -92,9 +92,14 @@ const Header = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button asChild variant="ghost" className="text-white hover:bg-white/10 hidden md:flex">
-                <Link to="/login">Login</Link>
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button asChild variant="ghost" size="sm" className="text-white hover:bg-white/10 text-xs px-2">
+                  <Link to="/login">Login</Link>
+                </Button>
+                <Button asChild size="sm" className="bg-white text-[#2874f0] hover:bg-gray-100 text-xs px-2">
+                  <Link to="/signup">Signup</Link>
+                </Button>
+              </div>
             )}
 
             {/* Cart with Badge */}
