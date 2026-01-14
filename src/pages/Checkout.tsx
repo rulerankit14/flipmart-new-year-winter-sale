@@ -83,6 +83,7 @@ const Checkout = () => {
   
   const [formData, setFormData] = useState({
     fullName: '',
+    email: '',
     phone: '',
     pincode: '',
     city: '',
@@ -123,8 +124,9 @@ const Checkout = () => {
   const originalTotal = items.reduce((sum, item) => sum + (item.product?.original_price || 0) * item.quantity, 0);
   const discount = originalTotal - totalAmount;
 
-  if (!user) {
-    navigate('/login');
+  // Redirect to cart if empty (allow guest checkout)
+  if (items.length === 0 && !orderPlaced) {
+    navigate('/cart');
     return null;
   }
 
@@ -142,6 +144,15 @@ const Checkout = () => {
       toast({
         title: 'Error',
         description: 'Please fill all required fields',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    // Require email for guest users
+    if (!user && !formData.email) {
+      toast({
+        title: 'Error',
+        description: 'Please enter your email address',
         variant: 'destructive',
       });
       return false;
@@ -165,17 +176,25 @@ const Checkout = () => {
     try {
       const shippingAddress = `${formData.fullName}\n${formData.phone}\n${formData.houseNo}, ${formData.roadName}\n${formData.city}, ${formData.state} - ${formData.pincode}`;
 
-      // Create order
+      // Create order (for logged-in or guest user)
+      const orderData: any = {
+        total_amount: totalAmount,
+        shipping_address: shippingAddress,
+        status: 'confirmed',
+        payment_status: paymentStatus,
+        payment_id: paymentId,
+      };
+
+      if (user) {
+        orderData.user_id = user.id;
+      } else {
+        orderData.guest_email = formData.email;
+        orderData.guest_phone = formData.phone;
+      }
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert({
-          user_id: user.id,
-          total_amount: totalAmount,
-          shipping_address: shippingAddress,
-          status: 'confirmed',
-          payment_status: paymentStatus,
-          payment_id: paymentId,
-        })
+        .insert(orderData)
         .select()
         .single();
 
@@ -336,14 +355,24 @@ const Checkout = () => {
               name="fullName"
               value={formData.fullName}
               onChange={handleChange}
-              placeholder="Full Name"
+              placeholder="Full Name *"
               className="h-14 text-base bg-background"
             />
+            {!user && (
+              <Input
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Email Address *"
+                className="h-14 text-base bg-background"
+              />
+            )}
             <Input
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              placeholder="Mobile number"
+              placeholder="Mobile number *"
               className="h-14 text-base bg-background"
             />
             <Input
