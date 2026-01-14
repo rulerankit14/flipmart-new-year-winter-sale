@@ -13,7 +13,6 @@ interface Product {
   selling_price: number;
   original_price: number;
   image_url: string | null;
-  stock: number;
   category_id: string | null;
 }
 
@@ -282,12 +281,6 @@ const ProductDetail = () => {
             </div>
           )}
 
-          {/* Stock Status */}
-          <div className="mb-4">
-            <p className={`text-sm font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-500'}`}>
-              {product.stock > 0 ? `In Stock (${product.stock} available)` : 'Out of Stock'}
-            </p>
-          </div>
         </div>
       </main>
 
