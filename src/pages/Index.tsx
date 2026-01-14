@@ -32,7 +32,7 @@ const Index = () => {
     const fetchData = async () => {
       const [categoriesRes, productsRes] = await Promise.all([
         supabase.from('categories').select('*').order('name'),
-        supabase.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(20),
+        supabase.from('products').select('*').eq('is_active', true).order('display_order', { ascending: true }).limit(20),
       ]);
 
       if (categoriesRes.data) {
