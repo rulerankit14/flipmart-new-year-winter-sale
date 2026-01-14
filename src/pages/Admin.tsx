@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, Image, Settings, CreditCard, Save, Upload, QrCode } from 'lucide-react';
+import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, Image, Settings, CreditCard, Save, Upload, QrCode, ArrowUp, ArrowDown } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -42,7 +42,7 @@ const Admin = () => {
 
   const fetchData = async () => {
     const [productsRes, categoriesRes, ordersRes, settingsRes] = await Promise.all([
-      supabase.from('products').select('*').order('created_at', { ascending: false }),
+      supabase.from('products').select('*').order('display_order', { ascending: true }),
       supabase.from('categories').select('*').order('name'),
       supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('settings').select('*'),
@@ -125,6 +125,8 @@ const Admin = () => {
 
   const handleAddProduct = async () => {
     const validImageUrls = productForm.image_urls.filter(url => url.trim() !== '');
+    // Get the max display_order and add 1 for new product
+    const maxOrder = products.length > 0 ? Math.max(...products.map(p => p.display_order || 0)) : -1;
     const { data: productData, error } = await supabase.from('products').insert({
       name: productForm.name,
       description: productForm.description,
@@ -133,6 +135,7 @@ const Admin = () => {
       image_url: validImageUrls[0] || null,
       stock: parseInt(productForm.stock) || 0,
       category_id: productForm.category_id || null,
+      display_order: maxOrder + 1,
     }).select().single();
     
     if (error) {
@@ -253,6 +256,35 @@ const Admin = () => {
     fetchData();
   };
 
+  const handleMoveProduct = async (productId: string, direction: 'up' | 'down') => {
+    const currentIndex = products.findIndex(p => p.id === productId);
+    if (currentIndex === -1) return;
+    
+    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (swapIndex < 0 || swapIndex >= products.length) return;
+
+    const currentProduct = products[currentIndex];
+    const swapProduct = products[swapIndex];
+
+    // Swap display_order values
+    const currentOrder = currentProduct.display_order ?? currentIndex;
+    const swapOrder = swapProduct.display_order ?? swapIndex;
+
+    try {
+      await Promise.all([
+        supabase.from('products').update({ display_order: swapOrder }).eq('id', currentProduct.id),
+        supabase.from('products').update({ display_order: currentOrder }).eq('id', swapProduct.id),
+      ]);
+      
+      toast({ title: `Product moved ${direction}` });
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error moving product', description: error.message, variant: 'destructive' });
+    }
+    setEditingProduct(null);
+    fetchData();
+  };
+
   const addEditImageField = () => {
     setEditForm({ ...editForm, image_urls: [...editForm.image_urls, ''] });
   };
@@ -337,9 +369,31 @@ const Admin = () => {
                 </Dialog>
               </CardHeader>
               <CardContent>
-                <Table><TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Original</TableHead><TableHead>Selling</TableHead><TableHead>Stock</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                  <TableBody>{products.map(p => (
+                <Table><TableHeader><TableRow><TableHead>Order</TableHead><TableHead>Name</TableHead><TableHead>Original</TableHead><TableHead>Selling</TableHead><TableHead>Stock</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                  <TableBody>{products.map((p, index) => (
                     <TableRow key={p.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleMoveProduct(p.id, 'up')}
+                            disabled={index === 0}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleMoveProduct(p.id, 'down')}
+                            disabled={index === products.length - 1}
+                            className="h-7 w-7 p-0"
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                       <TableCell>{p.name}</TableCell>
                       <TableCell>₹{p.original_price}</TableCell>
                       <TableCell>₹{p.selling_price}</TableCell>
