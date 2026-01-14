@@ -10,9 +10,91 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, Image, Settings, CreditCard, Save, Upload, QrCode, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, CreditCard, Save, Upload, QrCode, GripVertical } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+interface SortableProductRowProps {
+  product: any;
+  onEdit: (product: any) => void;
+  onDelete: (id: string) => void;
+}
+
+const SortableProductRow = ({ product, onEdit, onDelete }: SortableProductRowProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: product.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <TableRow ref={setNodeRef} style={style}>
+      <TableCell>
+        <button
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </TableCell>
+      <TableCell>{product.name}</TableCell>
+      <TableCell>₹{product.original_price}</TableCell>
+      <TableCell>₹{product.selling_price}</TableCell>
+      <TableCell>{product.stock}</TableCell>
+      <TableCell className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => onEdit(product)}>
+          <Edit className="h-4 w-4" />
+        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /></Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Product</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{product.name}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onDelete(product.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </TableCell>
+    </TableRow>
+  );
+};
 
 const Admin = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -256,33 +338,35 @@ const Admin = () => {
     fetchData();
   };
 
-  const handleMoveProduct = async (productId: string, direction: 'up' | 'down') => {
-    const currentIndex = products.findIndex(p => p.id === productId);
-    if (currentIndex === -1) return;
-    
-    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (swapIndex < 0 || swapIndex >= products.length) return;
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
-    const currentProduct = products[currentIndex];
-    const swapProduct = products[swapIndex];
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
 
-    // Swap display_order values
-    const currentOrder = currentProduct.display_order ?? currentIndex;
-    const swapOrder = swapProduct.display_order ?? swapIndex;
+    if (over && active.id !== over.id) {
+      const oldIndex = products.findIndex((p) => p.id === active.id);
+      const newIndex = products.findIndex((p) => p.id === over.id);
 
-    try {
-      await Promise.all([
-        supabase.from('products').update({ display_order: swapOrder }).eq('id', currentProduct.id),
-        supabase.from('products').update({ display_order: currentOrder }).eq('id', swapProduct.id),
-      ]);
-      
-      toast({ title: `Product moved ${direction}` });
-      fetchData();
-    } catch (error: any) {
-      toast({ title: 'Error moving product', description: error.message, variant: 'destructive' });
+      const newProducts = arrayMove(products, oldIndex, newIndex);
+      setProducts(newProducts);
+
+      // Update display_order for all affected products
+      try {
+        const updates = newProducts.map((product, index) => 
+          supabase.from('products').update({ display_order: index }).eq('id', product.id)
+        );
+        await Promise.all(updates);
+        toast({ title: 'Product order updated!' });
+      } catch (error: any) {
+        toast({ title: 'Error updating order', description: error.message, variant: 'destructive' });
+        fetchData(); // Revert on error
+      }
     }
-    setEditingProduct(null);
-    fetchData();
   };
 
   const addEditImageField = () => {
@@ -369,62 +453,36 @@ const Admin = () => {
                 </Dialog>
               </CardHeader>
               <CardContent>
-                <Table><TableHeader><TableRow><TableHead>Order</TableHead><TableHead>Name</TableHead><TableHead>Original</TableHead><TableHead>Selling</TableHead><TableHead>Stock</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                  <TableBody>{products.map((p, index) => (
-                    <TableRow key={p.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleMoveProduct(p.id, 'up')}
-                            disabled={index === 0}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ArrowUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleMoveProduct(p.id, 'down')}
-                            disabled={index === products.length - 1}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>{p.name}</TableCell>
-                      <TableCell>₹{p.original_price}</TableCell>
-                      <TableCell>₹{p.selling_price}</TableCell>
-                      <TableCell>{p.stock}</TableCell>
-                      <TableCell className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEditProduct(p)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /></Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Product</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{p.name}"? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteProduct(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
-                    </TableRow>
-                  ))}</TableBody>
-                </Table>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12"></TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Original</TableHead>
+                        <TableHead>Selling</TableHead>
+                        <TableHead>Stock</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <SortableContext items={products.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                        {products.map((p) => (
+                          <SortableProductRow
+                            key={p.id}
+                            product={p}
+                            onEdit={handleEditProduct}
+                            onDelete={handleDeleteProduct}
+                          />
+                        ))}
+                      </SortableContext>
+                    </TableBody>
+                  </Table>
+                </DndContext>
               </CardContent>
             </Card>
 
