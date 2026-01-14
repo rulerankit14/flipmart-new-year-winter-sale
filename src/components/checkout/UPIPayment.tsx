@@ -223,9 +223,9 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
       <div className="rounded-xl overflow-hidden">
         <div className="bg-gradient-to-r from-[#5f259f] to-[#6739b7] p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* PhonePe Logo */}
-            <div className="bg-white rounded-lg p-1 overflow-hidden">
-              <img src={phonePeLogo} alt="PhonePe" className="w-10 h-10 object-contain" />
+            {/* PhonePe Logo - blended with purple background */}
+            <div className="w-12 h-12 rounded-lg bg-[#5f259f] flex items-center justify-center border-2 border-white/30">
+              <span className="text-white text-2xl font-bold">₱</span>
             </div>
             <span className="text-white text-lg font-semibold">PhonePe</span>
           </div>
