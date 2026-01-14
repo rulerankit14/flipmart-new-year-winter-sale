@@ -10,8 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, CreditCard, Save, Upload, QrCode, GripVertical, Shield, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, CreditCard, Save, Upload, QrCode, GripVertical, Shield, UserPlus, Loader2, Mail, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import {
   DndContext,
@@ -122,6 +123,10 @@ const Admin = () => {
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [addingAdmin, setAddingAdmin] = useState(false);
+  const [adminOtpStep, setAdminOtpStep] = useState<'email' | 'otp'>('email');
+  const [adminOtp, setAdminOtp] = useState('');
+  const [pendingAdminUserId, setPendingAdminUserId] = useState<string | null>(null);
+  const [sendingOtp, setSendingOtp] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -237,15 +242,15 @@ const Admin = () => {
     }
   };
 
-  const handleAddAdmin = async () => {
+  const handleSendAdminOtp = async () => {
     if (!newAdminEmail.trim()) {
       toast({ title: 'Error', description: 'Please enter an email address', variant: 'destructive' });
       return;
     }
 
-    setAddingAdmin(true);
+    setSendingOtp(true);
     try {
-      // Find user by email in profiles table
+      // First validate the new admin email exists
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('user_id')
@@ -260,7 +265,7 @@ const Admin = () => {
           description: 'No user found with this email. Make sure the user has signed up first.', 
           variant: 'destructive' 
         });
-        setAddingAdmin(false);
+        setSendingOtp(false);
         return;
       }
 
@@ -268,6 +273,67 @@ const Admin = () => {
       const existingAdmin = adminUsers.find(a => a.user_id === profile.user_id);
       if (existingAdmin) {
         toast({ title: 'Already admin', description: 'This user is already an admin', variant: 'destructive' });
+        setSendingOtp(false);
+        return;
+      }
+
+      // Store the pending admin user ID
+      setPendingAdminUserId(profile.user_id);
+
+      // Send OTP to current admin's email for verification
+      const currentAdminEmail = user?.email;
+      if (!currentAdminEmail) {
+        toast({ title: 'Error', description: 'Could not get current admin email', variant: 'destructive' });
+        setSendingOtp(false);
+        return;
+      }
+
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: currentAdminEmail,
+        options: {
+          shouldCreateUser: false,
+        },
+      });
+
+      if (otpError) throw otpError;
+
+      toast({ 
+        title: 'OTP Sent!', 
+        description: `Verification code sent to ${currentAdminEmail}` 
+      });
+      setAdminOtpStep('otp');
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyAndAddAdmin = async () => {
+    if (adminOtp.length !== 6) {
+      toast({ title: 'Invalid OTP', description: 'Please enter the 6-digit code', variant: 'destructive' });
+      return;
+    }
+
+    if (!pendingAdminUserId) {
+      toast({ title: 'Error', description: 'No pending admin to add', variant: 'destructive' });
+      return;
+    }
+
+    setAddingAdmin(true);
+    try {
+      // Verify OTP
+      const currentAdminEmail = user?.email;
+      if (!currentAdminEmail) throw new Error('Could not get current admin email');
+
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email: currentAdminEmail,
+        token: adminOtp,
+        type: 'email',
+      });
+
+      if (verifyError) {
+        toast({ title: 'Verification failed', description: verifyError.message, variant: 'destructive' });
         setAddingAdmin(false);
         return;
       }
@@ -275,18 +341,49 @@ const Admin = () => {
       // Add admin role
       const { error: insertError } = await supabase
         .from('user_roles')
-        .insert({ user_id: profile.user_id, role: 'admin' });
+        .insert({ user_id: pendingAdminUserId, role: 'admin' });
 
       if (insertError) throw insertError;
 
       toast({ title: 'Admin added successfully!' });
-      setNewAdminEmail('');
+      resetAdminForm();
       fetchData();
     } catch (error: any) {
       toast({ title: 'Error adding admin', description: error.message, variant: 'destructive' });
     } finally {
       setAddingAdmin(false);
     }
+  };
+
+  const handleResendAdminOtp = async () => {
+    const currentAdminEmail = user?.email;
+    if (!currentAdminEmail) return;
+
+    setSendingOtp(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: currentAdminEmail,
+        options: {
+          shouldCreateUser: false,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({ title: 'OTP Resent!', description: 'Check your email for the new code' });
+      setAdminOtp('');
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const resetAdminForm = () => {
+    setNewAdminEmail('');
+    setAdminOtp('');
+    setAdminOtpStep('email');
+    setPendingAdminUserId(null);
   };
 
   const handleRemoveAdmin = async (userId: string) => {
@@ -760,26 +857,116 @@ const Admin = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Add new admin */}
-                <div className="space-y-2">
-                  <Label htmlFor="new_admin_email">Add New Admin</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="new_admin_email"
-                      type="email"
-                      placeholder="Enter email address"
-                      value={newAdminEmail}
-                      onChange={(e) => setNewAdminEmail(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddAdmin()}
-                    />
-                    <Button onClick={handleAddAdmin} disabled={addingAdmin}>
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      {addingAdmin ? 'Adding...' : 'Add Admin'}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    The user must have already signed up with this email address
-                  </p>
+                {/* Add new admin with OTP verification */}
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <Label className="text-base font-semibold">Add New Admin</Label>
+                  
+                  {adminOtpStep === 'email' ? (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="new_admin_email">New Admin Email</Label>
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Input
+                              id="new_admin_email"
+                              type="email"
+                              placeholder="Enter email address"
+                              value={newAdminEmail}
+                              onChange={(e) => setNewAdminEmail(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleSendAdminOtp()}
+                              className="pl-10"
+                            />
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <Button onClick={handleSendAdminOtp} disabled={sendingOtp || !newAdminEmail.trim()}>
+                            {sendingOtp ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <UserPlus className="h-4 w-4 mr-2" />
+                                Send OTP
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        An OTP will be sent to your admin email ({user?.email}) for verification before adding the new admin.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-primary/10 rounded-lg">
+                        <p className="text-sm">
+                          Adding admin: <strong>{newAdminEmail}</strong>
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Enter the OTP sent to {user?.email}
+                        </p>
+                      </div>
+                      
+                      <div className="flex justify-center">
+                        <InputOTP
+                          maxLength={6}
+                          value={adminOtp}
+                          onChange={(value) => setAdminOtp(value)}
+                        >
+                          <InputOTPGroup>
+                            <InputOTPSlot index={0} />
+                            <InputOTPSlot index={1} />
+                            <InputOTPSlot index={2} />
+                            <InputOTPSlot index={3} />
+                            <InputOTPSlot index={4} />
+                            <InputOTPSlot index={5} />
+                          </InputOTPGroup>
+                        </InputOTP>
+                      </div>
+                      
+                      <p className="text-center text-sm text-muted-foreground">
+                        Didn't receive the code?{' '}
+                        <button
+                          type="button"
+                          onClick={handleResendAdminOtp}
+                          disabled={sendingOtp}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          Resend OTP
+                        </button>
+                      </p>
+                      
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          onClick={resetAdminForm}
+                          disabled={addingAdmin}
+                          className="flex-1"
+                        >
+                          <ArrowLeft className="h-4 w-4 mr-2" />
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={handleVerifyAndAddAdmin} 
+                          disabled={addingAdmin || adminOtp.length !== 6}
+                          className="flex-1"
+                        >
+                          {addingAdmin ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Verifying...
+                            </>
+                          ) : (
+                            <>
+                              <Shield className="h-4 w-4 mr-2" />
+                              Verify & Add
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Current admins list */}
