@@ -31,8 +31,29 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState({ hours: 23, minutes: 59, seconds: 59 });
   const { addToCart } = useCart();
   const navigate = useNavigate();
+
+  // Live countdown timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.seconds > 0) {
+          return { ...prev, seconds: prev.seconds - 1 };
+        } else if (prev.minutes > 0) {
+          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        } else if (prev.hours > 0) {
+          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        } else {
+          // Reset timer for demo
+          return { hours: 23, minutes: 59, seconds: 59 };
+        }
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -225,7 +246,9 @@ const ProductDetail = () => {
           <div className="bg-gray-50 p-3 rounded-lg mb-4">
             <p className="text-center text-sm">
               <span className="text-gray-700">Offer ends in</span>{' '}
-              <span className="text-orange-500 font-semibold">23hr 59min</span>
+              <span className="text-orange-500 font-semibold">
+                {timeLeft.hours}hr {timeLeft.minutes.toString().padStart(2, '0')}min {timeLeft.seconds.toString().padStart(2, '0')}sec
+              </span>
             </p>
           </div>
 
