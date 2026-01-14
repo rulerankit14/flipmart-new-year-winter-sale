@@ -31,7 +31,7 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const [timeLeft, setTimeLeft] = useState({ hours: 23, minutes: 59, seconds: 59 });
+  const [timeLeft, setTimeLeft] = useState({ minutes: 12, seconds: 59 });
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
@@ -42,12 +42,10 @@ const ProductDetail = () => {
         if (prev.seconds > 0) {
           return { ...prev, seconds: prev.seconds - 1 };
         } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+          return { minutes: prev.minutes - 1, seconds: 59 };
         } else {
           // Reset timer for demo
-          return { hours: 23, minutes: 59, seconds: 59 };
+          return { minutes: 12, seconds: 59 };
         }
       });
     }, 1000);
@@ -247,7 +245,7 @@ const ProductDetail = () => {
             <p className="text-center text-sm">
               <span className="text-gray-700">Offer ends in</span>{' '}
               <span className="text-orange-500 font-semibold">
-                {timeLeft.hours}hr {timeLeft.minutes.toString().padStart(2, '0')}min {timeLeft.seconds.toString().padStart(2, '0')}sec
+                {timeLeft.minutes}min {timeLeft.seconds.toString().padStart(2, '0')}sec
               </span>
             </p>
           </div>
