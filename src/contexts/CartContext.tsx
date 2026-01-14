@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +43,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const fetchCart = async () => {
     if (!user) {
@@ -85,6 +87,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: 'You need to login to add items to cart',
         variant: 'destructive',
       });
+      navigate('/login');
       return;
     }
 
