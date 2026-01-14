@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, CreditCard, Save, Upload, QrCode, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Edit, Package, ShoppingCart, Users, X, CreditCard, Save, Upload, QrCode, GripVertical, Shield, UserPlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import {
@@ -119,6 +119,9 @@ const Admin = () => {
   const [upiSettings, setUpiSettings] = useState({ merchant_upi_id: '', merchant_name: '', merchant_qr_url: '' });
   const [savingSettings, setSavingSettings] = useState(false);
   const [uploadingQr, setUploadingQr] = useState(false);
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [addingAdmin, setAddingAdmin] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -129,11 +132,12 @@ const Admin = () => {
   }, [user, isAdmin, authLoading, navigate]);
 
   const fetchData = async () => {
-    const [productsRes, categoriesRes, ordersRes, settingsRes] = await Promise.all([
+    const [productsRes, categoriesRes, ordersRes, settingsRes, adminRolesRes] = await Promise.all([
       supabase.from('products').select('*').order('display_order', { ascending: true }),
       supabase.from('categories').select('*').order('name'),
       supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('settings').select('*'),
+      supabase.from('user_roles').select('*').eq('role', 'admin'),
     ]);
     if (productsRes.data) setProducts(productsRes.data);
     if (categoriesRes.data) setCategories(categoriesRes.data);
@@ -149,6 +153,28 @@ const Admin = () => {
         merchant_qr_url: settings['merchant_qr_url'] || '',
       });
     }
+    
+    // Fetch admin user emails from profiles
+    if (adminRolesRes.data && adminRolesRes.data.length > 0) {
+      const userIds = adminRolesRes.data.map((r: any) => r.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, email, full_name')
+        .in('user_id', userIds);
+      
+      const adminsWithDetails = adminRolesRes.data.map((role: any) => {
+        const profile = profiles?.find((p: any) => p.user_id === role.user_id);
+        return {
+          ...role,
+          email: profile?.email || 'Unknown',
+          full_name: profile?.full_name || '',
+        };
+      });
+      setAdminUsers(adminsWithDetails);
+    } else {
+      setAdminUsers([]);
+    }
+    
     setLoading(false);
   };
 
@@ -208,6 +234,81 @@ const Admin = () => {
       toast({ title: 'Error uploading QR code', description: error.message, variant: 'destructive' });
     } finally {
       setUploadingQr(false);
+    }
+  };
+
+  const handleAddAdmin = async () => {
+    if (!newAdminEmail.trim()) {
+      toast({ title: 'Error', description: 'Please enter an email address', variant: 'destructive' });
+      return;
+    }
+
+    setAddingAdmin(true);
+    try {
+      // Find user by email in profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('email', newAdminEmail.trim().toLowerCase())
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+
+      if (!profile) {
+        toast({ 
+          title: 'User not found', 
+          description: 'No user found with this email. Make sure the user has signed up first.', 
+          variant: 'destructive' 
+        });
+        setAddingAdmin(false);
+        return;
+      }
+
+      // Check if already admin
+      const existingAdmin = adminUsers.find(a => a.user_id === profile.user_id);
+      if (existingAdmin) {
+        toast({ title: 'Already admin', description: 'This user is already an admin', variant: 'destructive' });
+        setAddingAdmin(false);
+        return;
+      }
+
+      // Add admin role
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({ user_id: profile.user_id, role: 'admin' });
+
+      if (insertError) throw insertError;
+
+      toast({ title: 'Admin added successfully!' });
+      setNewAdminEmail('');
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error adding admin', description: error.message, variant: 'destructive' });
+    } finally {
+      setAddingAdmin(false);
+    }
+  };
+
+  const handleRemoveAdmin = async (userId: string) => {
+    // Prevent removing yourself
+    if (userId === user?.id) {
+      toast({ title: 'Cannot remove yourself', description: 'You cannot remove your own admin access', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', 'admin');
+
+      if (error) throw error;
+
+      toast({ title: 'Admin removed successfully!' });
+      fetchData();
+    } catch (error: any) {
+      toast({ title: 'Error removing admin', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -410,6 +511,7 @@ const Admin = () => {
             <TabsTrigger value="categories">Categories</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="admins">Admins</TabsTrigger>
           </TabsList>
           
           <TabsContent value="products" className="mt-4">
@@ -642,6 +744,109 @@ const Admin = () => {
                   <Save className="h-4 w-4 mr-2" />
                   {savingSettings ? 'Saving...' : 'Save Settings'}
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="admins" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Admin Management
+                </CardTitle>
+                <CardDescription>
+                  Add or remove admin users. Admins have full access to manage products, orders, and settings.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Add new admin */}
+                <div className="space-y-2">
+                  <Label htmlFor="new_admin_email">Add New Admin</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="new_admin_email"
+                      type="email"
+                      placeholder="Enter email address"
+                      value={newAdminEmail}
+                      onChange={(e) => setNewAdminEmail(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddAdmin()}
+                    />
+                    <Button onClick={handleAddAdmin} disabled={addingAdmin}>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      {addingAdmin ? 'Adding...' : 'Add Admin'}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    The user must have already signed up with this email address
+                  </p>
+                </div>
+
+                {/* Current admins list */}
+                <div className="space-y-2">
+                  <Label>Current Admins ({adminUsers.length})</Label>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead className="w-24">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {adminUsers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground">
+                            No admins found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        adminUsers.map((admin) => (
+                          <TableRow key={admin.id}>
+                            <TableCell className="font-medium">
+                              {admin.email}
+                              {admin.user_id === user?.id && (
+                                <span className="ml-2 text-xs text-muted-foreground">(You)</span>
+                              )}
+                            </TableCell>
+                            <TableCell>{admin.full_name || '-'}</TableCell>
+                            <TableCell>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm"
+                                    disabled={admin.user_id === user?.id}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Remove Admin</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to remove admin access for "{admin.email}"? 
+                                      They will no longer be able to access the admin panel.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => handleRemoveAdmin(admin.user_id)} 
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Remove Admin
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
