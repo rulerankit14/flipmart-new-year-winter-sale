@@ -27,11 +27,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
     <Link to={`/product/${id}`} className="block">
       <div className="bg-white p-3 h-full flex flex-col">
         {/* Product Image */}
-        <div className="aspect-square mb-3 flex items-center justify-center">
+        <div className="h-40 mb-3 flex items-center justify-center">
           <img
             src={imageUrl || 'https://via.placeholder.com/200x200?text=Product'}
             alt={name}
-            className="max-w-full max-h-full object-contain"
+            className="w-full h-full object-contain"
           />
         </div>
 
