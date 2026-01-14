@@ -4,40 +4,124 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const Login = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState<'email' | 'otp'>('email');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email.trim()) {
+      toast({
+        title: 'Email required',
+        description: 'Please enter your email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
 
-    const { error } = await signIn(email, password);
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
     
     if (error) {
       toast({
-        title: 'Login failed',
+        title: 'Failed to send OTP',
         description: error.message,
         variant: 'destructive',
       });
     } else {
       toast({
-        title: 'Welcome back!',
+        title: 'OTP Sent!',
+        description: 'Check your email for the verification code.',
+      });
+      setStep('otp');
+    }
+    
+    setLoading(false);
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (otp.length !== 6) {
+      toast({
+        title: 'Invalid OTP',
+        description: 'Please enter the 6-digit code',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: otp,
+      type: 'email',
+    });
+    
+    if (error) {
+      toast({
+        title: 'Verification failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Welcome!',
         description: 'You have successfully logged in.',
       });
       navigate('/');
     }
     
     setLoading(false);
+  };
+
+  const handleResendOtp = async () => {
+    setLoading(true);
+    
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+    
+    if (error) {
+      toast({
+        title: 'Failed to resend OTP',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'OTP Resent!',
+        description: 'Check your email for the new verification code.',
+      });
+      setOtp('');
+    }
+    
+    setLoading(false);
+  };
+
+  const handleBack = () => {
+    setStep('email');
+    setOtp('');
   };
 
   return (
@@ -47,47 +131,99 @@ const Login = () => {
           <Link to="/" className="text-3xl font-bold text-primary italic mb-2">
             Flipkart
           </Link>
-          <CardTitle>Login</CardTitle>
-          <CardDescription>Enter your credentials to access your account</CardDescription>
+          <CardTitle>
+            {step === 'email' ? 'Login' : 'Verify OTP'}
+          </CardTitle>
+          <CardDescription>
+            {step === 'email' 
+              ? 'Enter your email to receive a one-time password' 
+              : `Enter the 6-digit code sent to ${email}`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+          {step === 'email' ? (
+            <form onSubmit={handleSendOtp} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="pl-10"
+                  />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
               </div>
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
-            </Button>
-          </form>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending OTP...
+                  </>
+                ) : (
+                  'Send OTP'
+                )}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex justify-center">
+                  <InputOTP
+                    maxLength={6}
+                    value={otp}
+                    onChange={(value) => setOtp(value)}
+                  >
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+                <p className="text-center text-sm text-muted-foreground">
+                  Didn't receive the code?{' '}
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={loading}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    Resend OTP
+                  </button>
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Button type="submit" className="w-full" disabled={loading || otp.length !== 6}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    'Verify & Login'
+                  )}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="w-full" 
+                  onClick={handleBack}
+                  disabled={loading}
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Change Email
+                </Button>
+              </div>
+            </form>
+          )}
           <div className="mt-4 text-center text-sm">
             <span className="text-muted-foreground">Don't have an account? </span>
             <Link to="/signup" className="text-primary hover:underline font-medium">
