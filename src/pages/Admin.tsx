@@ -72,7 +72,6 @@ const SortableProductRow = ({ product, onEdit, onDelete }: SortableProductRowPro
       <td className="p-4 align-middle">{product.name}</td>
       <td className="p-4 align-middle">₹{product.original_price}</td>
       <td className="p-4 align-middle">₹{product.selling_price}</td>
-      <td className="p-4 align-middle">{product.stock}</td>
       <td className="p-4 align-middle">
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => onEdit(product)}>
@@ -111,12 +110,12 @@ const Admin = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [productForm, setProductForm] = useState({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], stock: '', category_id: '' });
+  const [productForm, setProductForm] = useState({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], category_id: '' });
   const [categoryForm, setCategoryForm] = useState({ name: '', slug: '', image_url: '' });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], stock: '', category_id: '' });
+  const [editForm, setEditForm] = useState({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], category_id: '' });
   const [upiSettings, setUpiSettings] = useState({ merchant_upi_id: '', merchant_name: '', merchant_qr_url: '' });
   const [savingSettings, setSavingSettings] = useState(false);
   const [uploadingQr, setUploadingQr] = useState(false);
@@ -222,7 +221,6 @@ const Admin = () => {
       original_price: parseFloat(productForm.original_price),
       selling_price: parseFloat(productForm.selling_price),
       image_url: validImageUrls[0] || null,
-      stock: parseInt(productForm.stock) || 0,
       category_id: productForm.category_id || null,
       display_order: maxOrder + 1,
     }).select().single();
@@ -243,7 +241,7 @@ const Admin = () => {
     }
     
     toast({ title: 'Product added!' }); 
-    setProductForm({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], stock: '', category_id: '' }); 
+    setProductForm({ name: '', description: '', original_price: '', selling_price: '', image_urls: [''], category_id: '' });
     setDialogOpen(false); 
     fetchData();
   };
@@ -298,7 +296,6 @@ const Admin = () => {
       original_price: product.original_price?.toString() || '',
       selling_price: product.selling_price?.toString() || '',
       image_urls: imageUrls,
-      stock: product.stock?.toString() || '',
       category_id: product.category_id || '',
     });
     setEditDialogOpen(true);
@@ -317,7 +314,6 @@ const Admin = () => {
         original_price: parseFloat(editForm.original_price),
         selling_price: parseFloat(editForm.selling_price),
         image_url: validImageUrls[0] || null,
-        stock: parseInt(editForm.stock) || 0,
         category_id: editForm.category_id || null,
       })
       .eq('id', editingProduct.id);
@@ -427,7 +423,6 @@ const Admin = () => {
                       <div><Label>Name</Label><Input value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} /></div>
                       <div><Label>Original Price (₹)</Label><Input type="number" value={productForm.original_price} onChange={e => setProductForm({...productForm, original_price: e.target.value})} /></div>
                       <div><Label>Selling Price (₹)</Label><Input type="number" value={productForm.selling_price} onChange={e => setProductForm({...productForm, selling_price: e.target.value})} /></div>
-                      <div><Label>Stock</Label><Input type="number" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} /></div>
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <Label>Product Images</Label>
@@ -472,7 +467,6 @@ const Admin = () => {
                         <TableHead>Name</TableHead>
                         <TableHead>Original</TableHead>
                         <TableHead>Selling</TableHead>
-                        <TableHead>Stock</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -501,7 +495,6 @@ const Admin = () => {
                   <div><Label>Name</Label><Input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} /></div>
                   <div><Label>Original Price (₹)</Label><Input type="number" value={editForm.original_price} onChange={e => setEditForm({...editForm, original_price: e.target.value})} /></div>
                   <div><Label>Selling Price (₹)</Label><Input type="number" value={editForm.selling_price} onChange={e => setEditForm({...editForm, selling_price: e.target.value})} /></div>
-                  <div><Label>Stock</Label><Input type="number" value={editForm.stock} onChange={e => setEditForm({...editForm, stock: e.target.value})} /></div>
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <Label>Product Images</Label>
