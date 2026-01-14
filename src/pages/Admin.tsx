@@ -47,52 +47,59 @@ const SortableProductRow = ({ product, onEdit, onDelete }: SortableProductRowPro
     isDragging,
   } = useSortable({ id: product.id });
 
-  const style = {
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    backgroundColor: isDragging ? 'hsl(var(--muted))' : undefined,
   };
 
   return (
-    <TableRow ref={setNodeRef} style={style}>
-      <TableCell>
+    <tr
+      ref={setNodeRef}
+      style={style}
+      className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+    >
+      <td className="p-4 align-middle">
         <button
-          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
+          className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded touch-none"
           {...attributes}
           {...listeners}
         >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </button>
-      </TableCell>
-      <TableCell>{product.name}</TableCell>
-      <TableCell>₹{product.original_price}</TableCell>
-      <TableCell>₹{product.selling_price}</TableCell>
-      <TableCell>{product.stock}</TableCell>
-      <TableCell className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={() => onEdit(product)}>
-          <Edit className="h-4 w-4" />
-        </Button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /></Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Product</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete "{product.name}"? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => onDelete(product.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </TableCell>
-    </TableRow>
+      </td>
+      <td className="p-4 align-middle">{product.name}</td>
+      <td className="p-4 align-middle">₹{product.original_price}</td>
+      <td className="p-4 align-middle">₹{product.selling_price}</td>
+      <td className="p-4 align-middle">{product.stock}</td>
+      <td className="p-4 align-middle">
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => onEdit(product)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /></Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete "{product.name}"? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => onDelete(product.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </td>
+    </tr>
   );
 };
 
