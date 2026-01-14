@@ -13,21 +13,6 @@ const Cart = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col bg-muted">
-        <Header />
-        <main className="flex-1 container mx-auto px-4 py-16 text-center">
-          <ShoppingBag className="h-24 w-24 mx-auto text-muted-foreground mb-4" />
-          <h1 className="text-2xl font-bold mb-4">Please Login</h1>
-          <p className="text-muted-foreground mb-8">You need to login to view your cart</p>
-          <Button onClick={() => navigate('/login')}>Login</Button>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-muted">
