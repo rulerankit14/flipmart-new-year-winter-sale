@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { QrCode, Check } from 'lucide-react';
 import phonePeLogo from '@/assets/phonepe-logo.png';
+import phonePeBanner from '@/assets/phonepe-banner.webp';
 import gpayLogo from '@/assets/gpay-logo.png';
 import paytmLogo from '@/assets/paytm-logo.png';
 import scanToPayIcon from '@/assets/scan-to-pay-icon.png';
@@ -221,21 +222,11 @@ const UPIPayment: React.FC<UPIPaymentProps> = ({
     <div className="space-y-4 mt-4">
       {/* Promotional Banner */}
       <div className="rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-[#5f259f] to-[#6739b7] p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* PhonePe Logo - blended with purple background */}
-            <div className="w-12 h-12 rounded-lg bg-[#5f259f] flex items-center justify-center border-2 border-white/30">
-              <span className="text-white text-2xl font-bold">₱</span>
-            </div>
-            <span className="text-white text-lg font-semibold">PhonePe</span>
-          </div>
-          <div className="text-right">
-            <p className="text-white font-bold">GET <span className="text-yellow-300">20%</span> CASHBACK</p>
-            <p className="text-white/90 text-sm">when you pay with</p>
-            <p className="text-white/90 text-sm">PhonePe UPI</p>
-            <p className="text-white/60 text-xs mt-1">* Condition Apply</p>
-          </div>
-        </div>
+        <img 
+          src={phonePeBanner} 
+          alt="Get 20% Cashback when you pay with PhonePe UPI" 
+          className="w-full h-auto"
+        />
       </div>
 
       {/* Offer Timer */}
